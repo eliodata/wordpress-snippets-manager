@@ -19,7 +19,7 @@ export class ApiConnector {
     }
 
     public async getSnippets(status: 'all' | 'active' | 'inactive' = 'all') {
-        let url = `${this.apiUrl}wp-json/trae/v1/snippets`;
+        let url = `${this.apiUrl}wp-json/ide/v1/snippets`;
         if (status !== 'all') {
             url += `?status=${status}`;
         }
@@ -30,28 +30,28 @@ export class ApiConnector {
     }
 
     public async getSnippet(id: number) {
-        const response = await axios.get(`${this.apiUrl}wp-json/trae/v1/snippets/${id}`, {
+        const response = await axios.get(`${this.apiUrl}wp-json/ide/v1/snippets/${id}`, {
             headers: this.getAuthHeaders()
         });
         return response.data;
     }
 
     public async createSnippet(data: any) {
-        const response = await axios.post(`${this.apiUrl}wp-json/trae/v1/snippets`, data, {
+        const response = await axios.post(`${this.apiUrl}wp-json/ide/v1/snippets`, data, {
             headers: this.getAuthHeaders()
         });
         return response.data;
     }
 
     public async updateSnippet(id: number, data: any) {
-        const response = await axios.put(`${this.apiUrl}wp-json/trae/v1/snippets/${id}`, data, {
+        const response = await axios.put(`${this.apiUrl}wp-json/ide/v1/snippets/${id}`, data, {
             headers: this.getAuthHeaders()
         });
         return response.data;
     }
 
     public async deleteSnippet(id: number) {
-        const response = await axios.delete(`${this.apiUrl}wp-json/trae/v1/snippets/${id}`, {
+        const response = await axios.delete(`${this.apiUrl}wp-json/ide/v1/snippets/${id}`, {
             headers: this.getAuthHeaders()
         });
         return response.data;
