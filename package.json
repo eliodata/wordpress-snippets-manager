@@ -2,7 +2,7 @@
     "name": "wordpress-snippets-manager",
     "displayName": "Trae AI - WordPress Snippet Manager",
     "description": "Supercharge your WordPress development with AI-powered snippet management directly in your IDE.",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "publisher": "trae-ai",
     "author": "eliodata.com",
     "repository": {

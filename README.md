@@ -46,9 +46,9 @@ The system consists of two parts:
 **Step 1: Install the WordPress Plugin**
 
 1.  Navigate to the `wordpress-plugin` directory in this repository.
-2.  Compress the `trae-snippet-connector` folder into a `.zip` file.
+2.  Compress the `ide-snippets-bridge` folder into a `.zip` file.
 3.  In your WordPress admin dashboard, go to `Plugins > Add New > Upload Plugin`.
-4.  Upload the `.zip` file and activate the "Trae Snippet Connector" plugin.
+4.  Upload the `.zip` file and activate the "IDE Code Snippets Bridge" plugin.
 
 **Step 2: Install the IDE Extension**
 

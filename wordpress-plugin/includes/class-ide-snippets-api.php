@@ -1,13 +1,48 @@
 <?php
+/**
+ * IDE Snippets API Class
+ *
+ * Handles REST API endpoints for code snippet management
+ * in conjunction with IDE extensions (like Trae AI, VS Code).
+ *
+ * @package IDESnippets
+ * @subpackage API
+ * @since 1.0.0
+ */
 
+// Prevent direct access
 if (!defined('ABSPATH')) {
-    exit; // Exit if accessed directly.
+    exit;
 }
 
-class Trae_Snippets_API {
+/**
+ * Main API class for IDE Snippets Bridge
+ *
+ * This class handles all REST API endpoints for communication
+ * between WordPress and IDE extensions. It provides secure
+ * Code Snippets plugin and IDE extensions like Trae AI or VS Code.
+ *
+ * @since 1.0.0
+ */
+class IDE_Snippets_API {
 
-    protected $namespace = 'trae/v1';
+    /**
+     * API namespace for IDE snippets endpoints.
+     *
+     * @since 1.0.0
+     * @var string
+     */
+    protected $namespace = 'ide/v1';
 
+    /**
+     * Register REST API routes
+     *
+     * Registers all the REST API endpoints for snippet management.
+     * Called during the 'rest_api_init' action.
+     *
+     * @since 1.0.0
+     * @return void
+     */
     public function register_routes() {
         register_rest_route($this->namespace, '/snippets',
             [
@@ -45,10 +80,28 @@ class Trae_Snippets_API {
         );
     }
 
+    /**
+     * Check if current user has permission to access API
+     *
+     * Ensures only administrators can manage snippets through the API.
+     * This is a security measure to prevent unauthorized access.
+     *
+     * @since 1.0.0
+     * @return bool True if user has manage_options capability, false otherwise
+     */
     public function check_permission() {
         return current_user_can('manage_options');
     }
 
+    /**
+     * Get the snippets table name
+     *
+     * Returns the full table name for the Code Snippets plugin table.
+     * Uses WordPress database prefix for multisite compatibility.
+     *
+     * @since 1.0.0
+     * @return string Full table name with WordPress prefix
+     */
     private function get_snippets_table_name() {
         global $wpdb;
         return $wpdb->prefix . 'snippets';
