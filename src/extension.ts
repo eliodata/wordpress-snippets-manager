@@ -1,26 +1,60 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import { SnippetProvider } from './providers/SnippetProvider';
+import { SnippetController } from './controllers/SnippetController';
+import { SnippetTreeDataProvider } from './providers/SnippetTreeDataProvider';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
+    const provider = new SnippetProvider(context);
+    await provider.initialize();
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "wordpress-snippets-manager" is now active!');
+    const snippetTreeDataProvider = new SnippetTreeDataProvider(provider);
+    vscode.window.registerTreeDataProvider('wordpress-snippets-view', snippetTreeDataProvider);
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('wordpress-snippets-manager.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from WordPress Snippets Manager!');
-	});
+    const controller = new SnippetController(provider);
 
-	context.subscriptions.push(disposable);
+    context.subscriptions.push(
+        vscode.commands.registerCommand('wordpressSnippets.refresh', () => snippetTreeDataProvider.refresh()),
+        vscode.commands.registerCommand('wordpressSnippets.createSnippet', async () => {
+            await controller.createSnippet();
+            snippetTreeDataProvider.refresh();
+        }),
+        vscode.commands.registerCommand('wordpressSnippets.delete', async (item) => {
+            await controller.deleteSnippet(item);
+            snippetTreeDataProvider.refresh();
+        }),
+        vscode.commands.registerCommand('wordpressSnippets.configure', async () => {
+            await controller.reconfigure();
+            snippetTreeDataProvider.refresh();
+        }),
+        vscode.commands.registerCommand('wordpressSnippets.openSnippet', (item) => controller.openSnippet(item.snippet.id)),
+        vscode.commands.registerCommand('wordpressSnippets.toggleSnippet', async (item) => {
+            await controller.toggleSnippet(item);
+            snippetTreeDataProvider.refresh();
+        }),
+        vscode.commands.registerCommand('wordpressSnippets.sortAsc', () => snippetTreeDataProvider.setSortOrder('asc')),
+        vscode.commands.registerCommand('wordpressSnippets.sortDesc', () => snippetTreeDataProvider.setSortOrder('desc')),
+        vscode.commands.registerCommand('wordpressSnippets.filterActive', () => snippetTreeDataProvider.setFilter('active')),
+        vscode.commands.registerCommand('wordpressSnippets.filterInactive', () => snippetTreeDataProvider.setFilter('inactive')),
+        vscode.commands.registerCommand('wordpressSnippets.filterAll', () => snippetTreeDataProvider.setFilter('all')),
+        vscode.commands.registerCommand('wordpressSnippets.searchSnippets', async () => {
+            const searchTerm = await vscode.window.showInputBox({ prompt: 'Rechercher des snippets' });
+            if (searchTerm !== undefined) {
+                snippetTreeDataProvider.setSearchTerm(searchTerm);
+            }
+        }),
+        vscode.commands.registerCommand('wordpressSnippets.analyzeSnippet', () => controller.analyzeSnippet()),
+        vscode.commands.registerCommand('wordpressSnippets.restoreBackup', (item) => controller.restoreBackup(item))
+    );
+
+    context.subscriptions.push(
+        vscode.workspace.onDidSaveTextDocument(async (document: vscode.TextDocument) => {
+            if (provider.isSnippetFile(document.uri.fsPath)) {
+                await provider.updateSnippetFromFile(document.uri.fsPath);
+            }
+        })
+    );
+
+
 }
 
-// This method is called when your extension is deactivated
 export function deactivate() {}
