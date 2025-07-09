@@ -77,7 +77,7 @@ class SnippetItem extends vscode.TreeItem {
         this.description = this.snippet.description;
         this.command = {
             command: 'wordpressSnippets.openSnippet',
-            title: 'Ouvrir le snippet',
+            title: 'Open Snippet',
             arguments: [this]
         };
         this.contextValue = 'snippet';

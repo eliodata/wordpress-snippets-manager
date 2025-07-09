@@ -10,13 +10,13 @@ export class SnippetController {
     }
 
     public async createSnippet() {
-        const name = await vscode.window.showInputBox({ prompt: 'Nom du snippet' });
+        const name = await vscode.window.showInputBox({ prompt: 'Snippet Name' });
         if (!name) return;
 
-        const description = await vscode.window.showInputBox({ prompt: 'Description du snippet' });
+        const description = await vscode.window.showInputBox({ prompt: 'Snippet Description' });
         if (description === undefined) return;
 
-        const content = await vscode.window.showInputBox({ prompt: 'Contenu du snippet' });
+        const content = await vscode.window.showInputBox({ prompt: 'Snippet Content' });
         if (!content) return;
 
         await this.snippetProvider.createSnippet({ name, code: content, description });
@@ -34,8 +34,8 @@ export class SnippetController {
             }
         }
 
-        const confirm = await vscode.window.showWarningMessage(`Êtes-vous sûr de vouloir supprimer le snippet "${snippet.name}" ?`, { modal: true }, 'Oui');
-        if (confirm === 'Oui') {
+        const confirm = await vscode.window.showWarningMessage(`Are you sure you want to delete the snippet "${snippet.name}"?`, { modal: true }, 'Yes');
+        if (confirm === 'Yes') {
             await this.snippetProvider.deleteSnippet(snippet.id);
         }
     }

@@ -1,10 +1,14 @@
 {
     "name": "wordpress-snippets-manager",
-    "displayName": "WordPress Snippets Manager",
-    "description": "Gérez vos snippets WordPress Code Snippets directement depuis Trae",
+    "displayName": "Trae AI - WordPress Snippet Manager",
+    "description": "Supercharge your WordPress development with AI-powered snippet management directly in your IDE.",
     "version": "1.1.0",
     "publisher": "trae-ai",
     "author": "eliodata.com",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/trae-ai/wordpress-snippets-manager.git"
+    },
     "engines": {
         "vscode": "^1.60.0"
     },
@@ -19,72 +23,72 @@
         "commands": [
             {
                 "command": "wordpressSnippets.list",
-                "title": "WordPress Snippets: Lister les snippets"
+                "title": "WordPress Snippets: List Snippets"
             },
             {
                 "command": "wordpressSnippets.create",
-                "title": "WordPress Snippets: Créer un snippet"
+                "title": "WordPress Snippets: Create Snippet"
             },
             {
                 "command": "wordpressSnippets.delete",
-                "title": "WordPress Snippets: Supprimer un snippet"
+                "title": "WordPress Snippets: Delete Snippet"
             },
             {
                 "command": "wordpressSnippets.configure",
-                "title": "WordPress Snippets: Configurer la connexion"
+                "title": "WordPress Snippets: Configure Connection"
             },
             {
                 "command": "wordpressSnippets.refresh",
-                "title": "Rafraîchir",
+                "title": "Refresh",
                 "icon": "$(refresh)"
             },
             {
                 "command": "wordpressSnippets.createSnippet",
-                "title": "Nouveau Snippet",
+                "title": "New Snippet",
                 "icon": "$(add)"
             },
             {
                 "command": "wordpressSnippets.openSnippet",
-                "title": "Ouvrir le snippet"
+                "title": "Open Snippet"
             },
             {
                 "command": "wordpressSnippets.toggleSnippet",
-                "title": "Activer / Désactiver"
+                "title": "Toggle Active"
             },
             {
                 "command": "wordpressSnippets.sortAsc",
-                "title": "Trier par ordre croissant",
+                "title": "Sort Ascending",
                 "icon": "$(arrow-up)"
             },
             {
                 "command": "wordpressSnippets.sortDesc",
-                "title": "Trier par ordre décroissant",
+                "title": "Sort Descending",
                 "icon": "$(arrow-down)"
             },
             {
                 "command": "wordpressSnippets.analyzeSnippet",
-                "title": "Analyser un snippet"
+                "title": "Analyze Snippet"
             },
             {
                 "command": "wordpressSnippets.filterActive",
-                "title": "Afficher les actifs"
+                "title": "Show Active"
             },
             {
                 "command": "wordpressSnippets.filterInactive",
-                "title": "Afficher les inactifs"
+                "title": "Show Inactive"
             },
             {
                 "command": "wordpressSnippets.filterAll",
-                "title": "Afficher tout"
+                "title": "Show All"
             },
             {
                 "command": "wordpressSnippets.searchSnippets",
-                "title": "Rechercher",
+                "title": "Search",
                 "icon": "$(search)"
             },
             {
                 "command": "wordpressSnippets.restoreBackup",
-                "title": "WordPress Snippets: Restaurer un backup"
+                "title": "WordPress Snippets: Restore Backup"
             }
         ],
         "menus": {
