@@ -3,7 +3,7 @@
  * Plugin Name: Trae Snippet Connector
  * Description: Provides a secure REST API endpoint to manage Code Snippets for the Trae IDE extension.
  * Version: 1.0.0
- * Author: Trae AI Assistant
+ * Author: eliodata.com
  */
 
 if (!defined('ABSPATH')) {

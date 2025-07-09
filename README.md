@@ -13,6 +13,10 @@ This Visual Studio Code extension allows you to manage your WordPress snippets d
 *   WordPress 5.0 or higher.
 *   The "Code Snippets" plugin installed and activated on your WordPress site.
 
+## Companion Plugin
+
+This extension requires a companion plugin to be installed on your WordPress site to communicate with the "Code Snippets" plugin. You can find the plugin in the `wordpress-plugin` directory of this repository.
+
 ## Installation
 
 1.  Install the extension from the Visual Studio Code Marketplace.
