@@ -68,13 +68,49 @@ export class SnippetTreeDataProvider implements vscode.TreeDataProvider<Snippet>
     }
 }
 
+function formatRelativeTime(dateString: string): string {
+    if (!dateString) {
+        return '';
+    }
+    // Replace space with 'T' to make it ISO 8601 compatible for robust parsing
+    const isoDateString = dateString.replace(' ', 'T');
+    const date = new Date(isoDateString);
+
+    if (isNaN(date.getTime())) {
+        return dateString; // Return original string if parsing fails
+    }
+
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 2) {
+        return 'just now';
+    }
+    if (seconds < 60) {
+        return `${seconds} seconds ago`;
+    }
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) {
+        return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    }
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) {
+        return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    }
+    const days = Math.floor(hours / 24);
+    if (days <= 7) {
+        return `${days} day${days > 1 ? 's' : ''} ago`;
+    }
+    return date.toLocaleDateString();
+}
+
 class SnippetItem extends vscode.TreeItem {
     constructor(
         public readonly snippet: Snippet
     ) {
         super(`[${snippet.id}] ${snippet.name}`, vscode.TreeItemCollapsibleState.None);
-        this.tooltip = `[${snippet.id}] ${this.snippet.name}`;
-        this.description = this.snippet.description;
+        this.tooltip = `[${snippet.id}] ${this.snippet.name}\nModified: ${snippet.modified}\nDescription: ${snippet.description}`;
+        this.description = formatRelativeTime(snippet.modified);
         this.command = {
             command: 'wordpressSnippets.openSnippet',
             title: 'Open Snippet',
