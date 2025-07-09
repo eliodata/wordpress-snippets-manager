@@ -1,0 +1,200 @@
+{
+    "name": "wordpress-snippets-manager",
+    "displayName": "WordPress Snippets Manager",
+    "description": "Gérez vos snippets WordPress Code Snippets directement depuis Trae",
+    "version": "1.1.0",
+    "publisher": "trae-ai",
+    "engines": {
+        "vscode": "^1.60.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "onStartup"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "wordpressSnippets.list",
+                "title": "WordPress Snippets: Lister les snippets"
+            },
+            {
+                "command": "wordpressSnippets.create",
+                "title": "WordPress Snippets: Créer un snippet"
+            },
+            {
+                "command": "wordpressSnippets.delete",
+                "title": "WordPress Snippets: Supprimer un snippet"
+            },
+            {
+                "command": "wordpressSnippets.configure",
+                "title": "WordPress Snippets: Configurer la connexion"
+            },
+            {
+                "command": "wordpressSnippets.refresh",
+                "title": "Rafraîchir",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "wordpressSnippets.createSnippet",
+                "title": "Nouveau Snippet",
+                "icon": "$(add)"
+            },
+            {
+                "command": "wordpressSnippets.openSnippet",
+                "title": "Ouvrir le snippet"
+            },
+            {
+                "command": "wordpressSnippets.toggleSnippet",
+                "title": "Activer / Désactiver"
+            },
+            {
+                "command": "wordpressSnippets.sortAsc",
+                "title": "Trier par ordre croissant",
+                "icon": "$(arrow-up)"
+            },
+            {
+                "command": "wordpressSnippets.sortDesc",
+                "title": "Trier par ordre décroissant",
+                "icon": "$(arrow-down)"
+            },
+            {
+                "command": "wordpressSnippets.analyzeSnippet",
+                "title": "Analyser un snippet"
+            },
+            {
+                "command": "wordpressSnippets.filterActive",
+                "title": "Afficher les actifs"
+            },
+            {
+                "command": "wordpressSnippets.filterInactive",
+                "title": "Afficher les inactifs"
+            },
+            {
+                "command": "wordpressSnippets.filterAll",
+                "title": "Afficher tout"
+            },
+            {
+                "command": "wordpressSnippets.searchSnippets",
+                "title": "Rechercher",
+                "icon": "$(search)"
+            },
+            {
+                "command": "wordpressSnippets.restoreBackup",
+                "title": "WordPress Snippets: Restaurer un backup"
+            }
+        ],
+        "menus": {
+            "view/title": [
+                {
+                    "command": "wordpressSnippets.createSnippet",
+                    "when": "view == wordpress-snippets-view",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "wordpressSnippets.refresh",
+                    "when": "view == wordpress-snippets-view",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "wordpressSnippets.searchSnippets",
+                    "when": "view == wordpress-snippets-view",
+                    "group": "navigation@3"
+                },
+                {
+                    "command": "wordpressSnippets.sortAsc",
+                    "when": "view == wordpress-snippets-view",
+                    "group": "navigation@4"
+                },
+                {
+                    "command": "wordpressSnippets.sortDesc",
+                    "when": "view == wordpress-snippets-view",
+                    "group": "navigation@5"
+                },
+                {
+                    "command": "wordpressSnippets.filterActive",
+                    "when": "view == wordpress-snippets-view",
+                    "group": "navigation@6",
+                    "icon": "$(filter)"
+                },
+                {
+                    "command": "wordpressSnippets.filterInactive",
+                    "when": "view == wordpress-snippets-view",
+                    "group": "navigation@7",
+                    "icon": "$(filter)"
+                },
+                {
+                    "command": "wordpressSnippets.filterAll",
+                    "when": "view == wordpress-snippets-view",
+                    "group": "navigation@8",
+                    "icon": "$(clear-all)"
+                }
+            ],
+            "view/item/context": [
+                {
+                    "command": "wordpressSnippets.openSnippet",
+                    "when": "viewItem == 'snippet'",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "wordpressSnippets.toggleSnippet",
+                    "when": "viewItem == 'snippet'",
+                    "group": "inline"
+                },
+                {
+                    "command": "wordpressSnippets.analyzeSnippet",
+                    "when": "viewItem == 'snippet'",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "wordpressSnippets.delete",
+                    "when": "viewItem == 'snippet'",
+                    "group": "navigation@3"
+                },
+                {
+                    "command": "wordpressSnippets.restoreBackup",
+                    "when": "viewItem == 'snippet'",
+                    "group": "navigation@4"
+                }
+            ]
+        },
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "wordpress-snippets-manager",
+                    "title": "WordPress Snippets",
+                    "icon": "assets/wordpress-logo.svg"
+                }
+            ]
+        },
+        "views": {
+            "wordpress-snippets-manager": [
+                {
+                    "id": "wordpress-snippets-view",
+                    "name": "Snippets"
+                }
+            ]
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "lint": "eslint src --ext ts",
+        "package": "vsce package"
+    },
+    "devDependencies": {
+        "@types/node": "^16.x",
+        "@types/vscode": "^1.60.0",
+        "@typescript-eslint/eslint-plugin": "^5.x",
+        "@typescript-eslint/parser": "^5.x",
+        "eslint": "^8.x",
+        "typescript": "^4.9.5",
+        "vsce": "^2.15.0"
+    },
+    "dependencies": {
+        "axios": "^1.x"
+    }
+}
