@@ -20,4 +20,4 @@ This Visual Studio Code extension allows you to manage your WordPress snippets d
 
 ## License
 
-This project is licensed under the MIT License. Copyright is held by eliodata. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. Copyright is held by eliodata.com. See the [LICENSE](LICENSE) file for details.

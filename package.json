@@ -4,6 +4,7 @@
     "description": "Gérez vos snippets WordPress Code Snippets directement depuis Trae",
     "version": "1.1.0",
     "publisher": "trae-ai",
+    "author": "eliodata.com",
     "engines": {
         "vscode": "^1.60.0"
     },
