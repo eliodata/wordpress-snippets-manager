@@ -1,0 +1,9 @@
+{
+    "wordpress-snippets.connection.host": "formatiobxelioda.mysql.db",
+    "wordpress-snippets.connection.database": "formatiobxelioda",
+    "wordpress-snippets.connection.tablePrefix": "wpbddfs_",
+    "wordpress-snippets.connection.username": "formatiobxelioda",
+    "wordpress-snippets-manager.database.database": "formatiobxelioda",
+    "wordpress-snippets-manager.database.host": "213.186.33.40",
+    "wordpress-snippets-manager.database.user": "formatiobxelioda"
+}
