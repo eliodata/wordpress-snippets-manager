@@ -251,8 +251,12 @@ ${snippet.code}`;
             const newCode = content.substring(headerEndIndex + 2).trim();
 
             const updateData: SnippetUpdateData = {
-                ...originalSnippet,
+                id: originalSnippet.id,
+                name: originalSnippet.name,
+                description: originalSnippet.description,
                 code: newCode,
+                active: originalSnippet.active,
+                tags: originalSnippet.tags,
             };
 
             if (descriptionMatch && descriptionMatch[1]) {

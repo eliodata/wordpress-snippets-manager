@@ -112,15 +112,13 @@ class IDE_Snippets_API {
         $table_name = $this->get_snippets_table_name();
         $status = $request->get_param('status');
 
-        $query = "SELECT * FROM $table_name";
-
         if ($status === 'active') {
-            $query .= " WHERE active = 1";
+            $results = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}snippets WHERE active = %d", 1));
         } elseif ($status === 'inactive') {
-            $query .= " WHERE active = 0";
+            $results = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}snippets WHERE active = %d", 0));
+        } else {
+            $results = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}snippets"));
         }
-
-        $results = $wpdb->get_results($query);
         foreach ($results as $key => $snippet) {
             $results[$key]->active = (bool) $snippet->active;
         }
@@ -131,7 +129,7 @@ class IDE_Snippets_API {
         global $wpdb;
         $id = $request['id'];
         $table_name = $this->get_snippets_table_name();
-        $snippet = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $id));
+        $snippet = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}snippets WHERE id = %d", $id));
         if (!$snippet) {
             return new WP_Error('not_found', 'Snippet not found', ['status' => 404]);
         }
@@ -162,7 +160,7 @@ class IDE_Snippets_API {
         }
 
         $new_id = $wpdb->insert_id;
-        $new_snippet = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $new_id));
+        $new_snippet = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}snippets WHERE id = %d", $new_id));
         $new_snippet->active = (bool) $new_snippet->active;
 
         return new WP_REST_Response($new_snippet, 201);
@@ -198,7 +196,7 @@ class IDE_Snippets_API {
             return new WP_Error('db_error', 'Could not update snippet', ['status' => 500]);
         }
 
-        $updated_snippet = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $id));
+        $updated_snippet = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}snippets WHERE id = %d", $id));
         $updated_snippet->active = (bool) $updated_snippet->active;
 
         return new WP_REST_Response($updated_snippet, 200);

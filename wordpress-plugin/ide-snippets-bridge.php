@@ -9,11 +9,9 @@
  * License: GPL v3 or later
  * License URI: https://www.gnu.org/licenses/gpl-3.0.html
  * Requires at least: 5.0
- * Tested up to: 6.4
+ * Tested up to: 6.8
  * Requires PHP: 7.4
- * Network: false
  * Text Domain: ide-snippets-bridge
- * Domain Path: /languages
  *
  * @package TraeAI
  * @subpackage SnippetsBridge
@@ -103,7 +101,7 @@ class IDE_Snippets_Bridge {
         if (!is_plugin_active('code-snippets/code-snippets.php')) {
             echo '<div class="notice notice-warning is-dismissible">';
             echo '<p><strong>IDE Code Snippets Bridge:</strong> ';
-            echo 'This plugin requires the <a href="' . admin_url('plugin-install.php?s=code-snippets&tab=search&type=term') . '">Code Snippets</a> plugin to be installed and activated.';
+            echo 'This plugin requires the <a href="' . esc_url(admin_url('plugin-install.php?s=code-snippets&tab=search&type=term')) . '">Code Snippets</a> plugin to be installed and activated.';
             echo '</p>';
             echo '</div>';
         }
@@ -118,13 +116,13 @@ class IDE_Snippets_Bridge {
         // Check WordPress version
         if (version_compare(get_bloginfo('version'), '5.0', '<')) {
             deactivate_plugins(IDE_SNIPPETS_BRIDGE_PLUGIN_BASENAME);
-            wp_die(__('IDE Code Snippets Bridge requires WordPress 5.0 or higher.', 'ide-snippets-bridge'));
+            wp_die(esc_html__('IDE Code Snippets Bridge requires WordPress 5.0 or higher.', 'ide-snippets-bridge'));
         }
 
         // Check PHP version
         if (version_compare(PHP_VERSION, '7.4', '<')) {
             deactivate_plugins(IDE_SNIPPETS_BRIDGE_PLUGIN_BASENAME);
-            wp_die(__('IDE Code Snippets Bridge requires PHP 7.4 or higher.', 'ide-snippets-bridge'));
+            wp_die(esc_html__('IDE Code Snippets Bridge requires PHP 7.4 or higher.', 'ide-snippets-bridge'));
         }
 
         // Flush rewrite rules

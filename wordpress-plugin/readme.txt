@@ -1,9 +1,9 @@
 === IDE Code Snippets Bridge ===
 Contributors: idesnippets, eliodata
 Donate link: https://eliodata.com/donate
-Tags: snippets, code, ide, ai, development, vscode, api, rest
+Tags: snippets, code, ide, api, development
 Requires at least: 5.0
-Tested up to: 6.4
+Tested up to: 6.8
 Stable tag: 1.2.0
 Requires PHP: 7.4
 License: GPLv3 or later
