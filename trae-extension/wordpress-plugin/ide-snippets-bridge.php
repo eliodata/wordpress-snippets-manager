@@ -98,7 +98,11 @@ class IDE_Snippets_Bridge {
      * @since 1.1.0
      */
     public function check_dependencies() {
-        if (!is_plugin_active('code-snippets/code-snippets.php')) {
+        // Check if either Code Snippets or Code Snippets Pro is active
+        $code_snippets_active = is_plugin_active('code-snippets/code-snippets.php');
+        $code_snippets_pro_active = is_plugin_active('code-snippets-pro/code-snippets.php');
+        
+        if (!$code_snippets_active && !$code_snippets_pro_active) {
             echo '<div class="notice notice-warning is-dismissible">';
             echo '<p><strong>IDE Code Snippets Bridge:</strong> ';
             echo 'This plugin requires the <a href="' . esc_url(admin_url('plugin-install.php?s=code-snippets&tab=search&type=term')) . '">Code Snippets</a> plugin to be installed and activated.';

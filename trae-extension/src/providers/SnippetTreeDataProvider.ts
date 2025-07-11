@@ -9,6 +9,7 @@ export class SnippetTreeDataProvider implements vscode.TreeDataProvider<Snippet>
     private filter: 'all' | 'active' | 'inactive' = 'all';
     private searchTerm: string = '';
     private sortOrder: 'asc' | 'desc' = 'asc';
+    private lastResultCount: number = 0;
 
     constructor(private snippetProvider: SnippetProvider) {
         this.snippetProvider.onDidChangeSnippets(() => this.refresh());
@@ -29,12 +30,24 @@ export class SnippetTreeDataProvider implements vscode.TreeDataProvider<Snippet>
         let snippets = await this.snippetProvider.getSnippets(this.filter);
 
         if (this.searchTerm) {
-            const lowercasedTerm = this.searchTerm.toLowerCase();
-            snippets = snippets.filter(s => 
-                s.name.toLowerCase().includes(lowercasedTerm) || 
-                s.description.toLowerCase().includes(lowercasedTerm) ||
-                s.code.toLowerCase().includes(lowercasedTerm)
-            );
+            const normalizedTerm = this.normalizeString(this.searchTerm);
+            
+            // Recherche par ID si le terme est numérique
+            if (/^\d+$/.test(this.searchTerm.trim())) {
+                const searchId = parseInt(this.searchTerm.trim(), 10);
+                const searchIdStr = this.searchTerm.trim();
+                snippets = snippets.filter(s => {
+                    // Comparer à la fois en tant que nombre et chaîne
+                    return s.id === searchId || s.id.toString() === searchIdStr;
+                });
+            } else {
+                // Recherche textuelle avec normalisation des accents
+                snippets = snippets.filter(s => 
+                    this.normalizeString(s.name).includes(normalizedTerm) || 
+                    this.normalizeString(s.description || '').includes(normalizedTerm) ||
+                    this.normalizeString(s.code).includes(normalizedTerm)
+                );
+            }
         }
 
         snippets.sort((a, b) => {
@@ -49,6 +62,8 @@ export class SnippetTreeDataProvider implements vscode.TreeDataProvider<Snippet>
             return 0;
         });
 
+        // Mettre à jour le compteur de résultats
+        this.lastResultCount = snippets.length;
         return snippets;
     }
 
@@ -62,9 +77,43 @@ export class SnippetTreeDataProvider implements vscode.TreeDataProvider<Snippet>
         this.refresh();
     }
 
+    clearSearch(): void {
+        this.searchTerm = '';
+        this.lastResultCount = 0;
+        this.refresh();
+    }
+
     setSortOrder(order: 'asc' | 'desc'): void {
         this.sortOrder = order;
         this.refresh();
+    }
+
+    private normalizeString(str: string): string {
+        return str.toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+    }
+
+    getSearchTerm(): string {
+        return this.searchTerm;
+    }
+
+    getResultCount(): number {
+        return this.lastResultCount;
+    }
+
+    getStatusMessage(): string {
+        if (this.searchTerm) {
+            const count = this.lastResultCount;
+            const term = this.searchTerm;
+            const isNumeric = /^\d+$/.test(term.trim());
+            if (isNumeric) {
+                return count > 0 ? `Snippet ID ${term} trouvé` : `Aucun snippet avec l'ID ${term}`;
+            } else {
+                return `${count} snippet${count !== 1 ? 's' : ''} trouvé${count !== 1 ? 's' : ''} pour "${term}"`;
+            }
+        }
+        return '';
     }
 }
 
@@ -109,7 +158,7 @@ class SnippetItem extends vscode.TreeItem {
         public readonly snippet: Snippet
     ) {
         super(`[${snippet.id}] ${snippet.name}`, vscode.TreeItemCollapsibleState.None);
-        this.tooltip = `[${snippet.id}] ${this.snippet.name}\nModified: ${snippet.modified}\nDescription: ${snippet.description}`;
+        this.tooltip = `[${snippet.id}] ${this.snippet.name}\nModified: ${snippet.modified}\nDescription: ${snippet.description || ''}`;
         this.description = formatRelativeTime(snippet.modified);
         this.command = {
             command: 'wordpressSnippets.openSnippet',

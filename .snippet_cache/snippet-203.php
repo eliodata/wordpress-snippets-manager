@@ -3,7 +3,7 @@
  * Snippet ID: 203
  * Name: styles css metabox.io champs labels generaux
  * Description: Styles CSS pour Meta Box - Version ultra-simplifiée  Active: false
- * @active true
+ * @active false
  */
 
 // Sécurité : empêcher l'accès direct

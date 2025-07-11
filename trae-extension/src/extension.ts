@@ -37,10 +37,36 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('wordpressSnippets.filterInactive', () => snippetTreeDataProvider.setFilter('inactive')),
         vscode.commands.registerCommand('wordpressSnippets.filterAll', () => snippetTreeDataProvider.setFilter('all')),
         vscode.commands.registerCommand('wordpressSnippets.searchSnippets', async () => {
-            const searchTerm = await vscode.window.showInputBox({ prompt: 'Rechercher des snippets' });
+            const currentTerm = snippetTreeDataProvider.getSearchTerm();
+            const searchTerm = await vscode.window.showInputBox({ 
+                prompt: 'Rechercher des snippets (par nom, description, code ou ID)', 
+                value: currentTerm,
+                placeHolder: 'Tapez votre recherche ou un ID de snippet...'
+            });
             if (searchTerm !== undefined) {
                 snippetTreeDataProvider.setSearchTerm(searchTerm);
+                
+                // Attendre un peu pour que le tree view se mette à jour
+                setTimeout(() => {
+                    const statusMessage = snippetTreeDataProvider.getStatusMessage();
+                    if (statusMessage) {
+                        vscode.window.setStatusBarMessage(`🔍 ${statusMessage}`, 5000);
+                        vscode.window.showInformationMessage(statusMessage);
+                    } else if (searchTerm.trim() === '') {
+                        const clearMessage = 'Recherche effacée';
+                        vscode.window.setStatusBarMessage(`🔍 ${clearMessage}`, 2000);
+                        vscode.window.showInformationMessage(clearMessage);
+                    } else {
+                        vscode.window.showInformationMessage('Aucun résultat trouvé');
+                    }
+                }, 1500);
             }
+        }),
+        vscode.commands.registerCommand('wordpressSnippets.clearSearch', () => {
+            snippetTreeDataProvider.clearSearch();
+            const clearMessage = 'Recherche effacée';
+            vscode.window.setStatusBarMessage(`🔍 ${clearMessage}`, 2000);
+            vscode.window.showInformationMessage(clearMessage);
         }),
         vscode.commands.registerCommand('wordpressSnippets.analyzeSnippet', () => controller.analyzeSnippet()),
         vscode.commands.registerCommand('wordpressSnippets.restoreBackup', (item) => controller.restoreBackup(item))
