@@ -137,6 +137,35 @@ export class FluentSnippetProvider implements vscode.Disposable, SnippetPluginPr
         }
     }
 
+    async toggleSnippet(id: string, active: boolean): Promise<boolean> {
+        console.log(`Toggling Fluent snippet ${id} to ${active}`);
+        if (!this.apiConnector) {
+            throw new Error('Le fournisseur n\'est pas initialisé');
+        }
+
+        try {
+            const response = await this.apiConnector.toggleFluentSnippet(id, active);
+            console.log(`API response for toggle Fluent snippet ${id}:`, response);
+
+            if (response && response.success) {
+                // Mettre à jour le cache local
+                const snippet = await this.getSnippet(id);
+                if (snippet) {
+                    await this.createCacheFile({ ...snippet, active: active });
+                }
+                this._onDidChangeSnippets.fire();
+                return true;
+            } else {
+                vscode.window.showErrorMessage(response.message || 'Failed to toggle FluentSnippet.');
+                return false;
+            }
+        } catch (error: any) {
+            console.error(`Error toggling Fluent snippet ${id}:`, error);
+            vscode.window.showErrorMessage('Erreur lors du changement de statut du snippet Fluent: ' + (error?.message || 'Erreur inconnue'));
+            return false;
+        }
+    }
+
     private extractNameFromInternalDoc(content: string): string | null {
         try {
             // Look for the @name: field in the Internal Doc section
@@ -450,62 +479,6 @@ ${snippet.code}`;
     async restoreBackup(snippetId: string | number, backupFile: string): Promise<boolean> {
         vscode.window.showInformationMessage('Backup and restore is not supported for FluentSnippets in this extension.');
         return false;
-    }
-
-    async toggleSnippet(id: string | number): Promise<boolean> {
-        if (!this.apiConnector) {
-            vscode.window.showErrorMessage('API connector not available.');
-            return false;
-        }
-
-        try {
-            console.log(`[DEBUG] Toggling FluentSnippet with ID: ${id}`);
-            
-            // Get current snippet to determine new status
-            const snippet = await this.getSnippet(id);
-            if (!snippet) {
-                vscode.window.showErrorMessage(`Snippet with ID ${id} not found.`);
-                return false;
-            }
-
-            console.log(`[DEBUG] Found snippet: ${snippet.name}, current status: ${snippet.active}`);
-
-            // Extract numeric ID from FS prefixed ID
-            const numericId = typeof id === 'string' && id.startsWith('FS') 
-                ? id.substring(2) 
-                : id;
-
-            console.log(`[DEBUG] Using numeric ID for API call: ${numericId}`);
-
-            // Toggle the status
-            const newStatus = !snippet.active;
-            console.log(`[DEBUG] New status will be: ${newStatus}`);
-            
-            const response = await this.apiConnector.toggleFluentSnippet(numericId, newStatus);
-            console.log(`[DEBUG] API response:`, response);
-            
-            if (response && response.success) {
-                // Update cache file with new status
-                snippet.active = newStatus;
-                await this.createCacheFile(snippet);
-                
-                this._onDidChangeSnippets.fire();
-                vscode.window.showInformationMessage(
-                    `Snippet "${snippet.name}" is now ${newStatus ? 'active' : 'inactive'}.`
-                );
-                return true;
-            } else {
-                vscode.window.showErrorMessage(`Failed to toggle snippet status. Response: ${JSON.stringify(response)}`);
-                return false;
-            }
-        } catch (error: any) {
-            console.error('Error toggling FluentSnippet:', error);
-            const errorMessage = error.response ? 
-                `HTTP ${error.response.status}: ${error.response.statusText}` : 
-                error.message || error.toString();
-            vscode.window.showErrorMessage(`Error toggling snippet: ${errorMessage}`);
-            return false;
-        }
     }
 
     /**

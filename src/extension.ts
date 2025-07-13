@@ -38,7 +38,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const snippetTreeDataProvider = new SnippetTreeDataProvider(provider);
     vscode.window.registerTreeDataProvider('wordpress-snippets-view', snippetTreeDataProvider);
 
-    const controller = new SnippetController(provider, context);
+    const controller = new SnippetController(provider, snippetTreeDataProvider, context);
 
     context.subscriptions.push(
         vscode.commands.registerCommand('wordpressSnippets.refresh', () => snippetTreeDataProvider.refresh()),

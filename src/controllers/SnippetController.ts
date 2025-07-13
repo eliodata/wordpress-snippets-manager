@@ -1,12 +1,17 @@
 import * as vscode from 'vscode';
 import { ConfigManager } from '../core/ConfigManager';
 import { SnippetPluginProvider } from '../providers/SnippetPluginProvider';
+import { SnippetTreeDataProvider } from '../providers/SnippetTreeDataProvider';
 import { Snippet } from '../types/Snippet';
 
 export class SnippetController {
     private configManager: ConfigManager;
 
-    constructor(private snippetProvider: SnippetPluginProvider, context: vscode.ExtensionContext) {
+    constructor(
+        private snippetProvider: SnippetPluginProvider, 
+        private snippetTreeDataProvider: SnippetTreeDataProvider, 
+        context: vscode.ExtensionContext
+    ) {
         this.configManager = new ConfigManager(context);
     }
 
@@ -103,19 +108,7 @@ export class SnippetController {
         if (!snippet) {
             return;
         }
-        
-        // Check if this is a FluentSnippet and if the provider has a toggleSnippet method
-        if (typeof snippet.id === 'string' && snippet.id.startsWith('FS') && 
-            'toggleSnippet' in this.snippetProvider && 
-            typeof this.snippetProvider.toggleSnippet === 'function') {
-            // Use the specific toggleSnippet method for FluentSnippets
-            await (this.snippetProvider as any).toggleSnippet(snippet.id);
-        } else {
-            // Use the standard updateSnippet method for Code Snippets
-            const { id, name, description, code, active } = snippet;
-            const updatedSnippet = { id, name, description, code, active: !active };
-            await this.snippetProvider.updateSnippet(updatedSnippet);
-        }
+        await this.snippetTreeDataProvider.toggleSnippet(snippet);
     }
 
     public async restoreBackup(item?: any) {

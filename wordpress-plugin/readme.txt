@@ -4,7 +4,7 @@ Donate link: https://eliodata.com/donate
 Tags: snippets, code, ide, api, development
 Requires at least: 5.0
 Tested up to: 6.8
-Stable tag: 1.3.0
+Stable tag: 1.3.1
 Requires PHP: 7.4
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
@@ -122,6 +122,13 @@ Yes, the plugin is fully compatible with WordPress Multisite installations.
 5. Visual previews of code changes with AI assistance
 
 == Changelog ==
+
+= 1.3.1 =
+* Fixed critical issue with FluentSnippets index.php file deletion during snippet toggle
+* Improved FluentSnippets compatibility with proper draft/published status handling
+* Enhanced snippet deactivation to maintain visibility in FluentSnippets interface
+* Added automatic index.php regeneration with correct Fluent Snippets data structure
+* Improved error handling and debug logging for FluentSnippets operations
 
 = 1.3.0 =
 * Added full support for FluentSnippets plugin alongside Code Snippets

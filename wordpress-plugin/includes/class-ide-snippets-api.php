@@ -32,7 +32,14 @@ class IDE_Snippets_API {
      * @since 1.2.0
      */
     public function __construct() {
-        if (is_plugin_active('fluent-snippets/fluent-snippets.php')) {
+        // Ensure plugin functions are available
+        if (!function_exists('is_plugin_active')) {
+            include_once(ABSPATH . 'wp-admin/includes/plugin.php');
+        }
+        
+        // Check for FluentSnippets variants
+        if (is_plugin_active('fluent-snippets/fluent-snippets.php') || 
+            is_plugin_active('easy-code-manager/easy-code-manager.php')) {
             $this->active_plugin = 'FluentSnippets';
         }
     }
@@ -63,6 +70,11 @@ class IDE_Snippets_API {
      * @return void
      */
     public function register_routes() {
+        // Log to confirm route registration is called
+        error_log('IDE Snippets Bridge: Registering REST API routes.');
+
+        // Rewrite rules are flushed on plugin activation.
+
         register_rest_route($this->namespace, '/snippets',
             [
                 [
@@ -109,7 +121,7 @@ class IDE_Snippets_API {
             ]
         );
 
-        register_rest_route($this->namespace, '/fluent-snippets/(?P<id>\d+)',
+        register_rest_route($this->namespace, '/fluent-snippets/(?P<id>[a-zA-Z0-9-]+)',
             [
                 [
                     'methods' => WP_REST_Server::EDITABLE,
@@ -119,7 +131,7 @@ class IDE_Snippets_API {
                         'id' => [
                             'required' => true,
                             'validate_callback' => function($param, $request, $key) {
-                                return is_numeric($param);
+                                return is_string($param);
                             }
                         ],
                     ],
@@ -128,7 +140,7 @@ class IDE_Snippets_API {
         );
 
         // FluentSnippets toggle endpoint
-        register_rest_route($this->namespace, '/fluent-snippets/(?P<id>\d+)/toggle',
+        register_rest_route($this->namespace, '/fluent-snippets/(?P<id>[a-zA-Z0-9-]+)/toggle',
             [
                 [
                     'methods' => WP_REST_Server::EDITABLE,
@@ -138,13 +150,15 @@ class IDE_Snippets_API {
                         'id' => [
                             'required' => true,
                             'validate_callback' => function($param, $request, $key) {
-                                return is_numeric($param);
+                                return is_string($param);
                             }
                         ],
                     ],
                 ],
             ]
         );
+        
+        error_log('IDE Snippets Bridge: FluentSnippets routes registered. Active plugin: ' . $this->active_plugin);
     }
 
     /**
@@ -418,7 +432,7 @@ class IDE_Snippets_API {
      * @return WP_REST_Response
      */
     public function update_fluent_snippet(WP_REST_Request $request) {
-        $id = $request['id'];
+        $id = str_replace('FS', '', $request['id']);
         $params = $request->get_json_params();
         
         // Find FluentSnippets storage path
@@ -513,6 +527,132 @@ class IDE_Snippets_API {
     }
 
     /**
+     * Regenerate FluentSnippets index.php file
+     *
+     * @since 1.3.1
+     * @param string $fluent_snippets_path
+     * @return void
+     */
+    private function regenerate_fluent_snippets_index($fluent_snippets_path) {
+        $index_file = $fluent_snippets_path . '/index.php';
+        
+        // Get all snippet files (active and disabled)
+        $active_files = glob($fluent_snippets_path . '/*.php');
+        $disabled_files = glob($fluent_snippets_path . '/disabled/*.php');
+        
+        $published_snippets = [];
+        $draft_snippets = [];
+        $backend_hooks = [];
+        
+        // Process active files (published)
+        foreach ($active_files as $file_path) {
+            $filename = basename($file_path);
+            
+            // Skip the index.php file itself
+            if ($filename === 'index.php') {
+                continue;
+            }
+            
+            // Extract ID and name from filename (format: ID-name.php)
+            if (preg_match('/^(\d+)-(.+)\.php$/', $filename, $matches)) {
+                $snippet_id = $matches[1];
+                $snippet_name = str_replace('-', ' ', ucwords($matches[2]));
+                
+                // Create FluentSnippets compatible entry
+                $published_snippets[$filename] = [
+                    'name' => $snippet_name,
+                    'description' => '',
+                    'type' => 'PHP',
+                    'status' => 'published',
+                    'tags' => '',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                    'run_at' => 'backend',
+                    'priority' => 10,
+                    'group' => 'IDE Snippets',
+                    'condition' => [
+                        'status' => 'no',
+                        'run_if' => 'assertive',
+                        'items' => [[]]
+                    ],
+                    'load_as_file' => '',
+                    'file_name' => $filename
+                ];
+                
+                // Add to backend hooks
+                $backend_hooks[] = $filename;
+            }
+        }
+        
+        // Process disabled files (draft)
+        foreach ($disabled_files as $file_path) {
+            $filename = basename($file_path);
+            
+            // Extract ID and name from filename (format: ID-name.php)
+            if (preg_match('/^(\d+)-(.+)\.php$/', $filename, $matches)) {
+                $snippet_id = $matches[1];
+                $snippet_name = str_replace('-', ' ', ucwords($matches[2]));
+                
+                // Create FluentSnippets compatible entry for draft
+                $draft_snippets[$filename] = [
+                    'name' => $snippet_name,
+                    'description' => '',
+                    'type' => 'PHP',
+                    'status' => 'draft',
+                    'tags' => '',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                    'run_at' => 'backend',
+                    'priority' => 10,
+                    'group' => 'IDE Snippets',
+                    'condition' => [
+                        'status' => 'no',
+                        'run_if' => 'assertive',
+                        'items' => [[]]
+                    ],
+                    'load_as_file' => '',
+                    'file_name' => $filename
+                ];
+            }
+        }
+        
+        // Create FluentSnippets compatible structure
+        $fluent_data = [
+            'published' => $published_snippets,
+            'draft' => $draft_snippets,
+            'hooks' => [
+                'backend' => $backend_hooks
+            ],
+            'meta' => [
+                'secret_key' => md5(uniqid()),
+                'force_disabled' => 'no',
+                'cached_at' => date('Y-m-d H:i:s'),
+                'cached_version' => '10.51',
+                'cashed_domain' => get_site_url(),
+                'legacy_status' => 'new',
+                'auto_disable' => 'yes',
+                'auto_publish' => 'no',
+                'remove_on_uninstall' => 'no'
+            ],
+            'error_files' => []
+        ];
+        
+        // Create the index.php content in FluentSnippets format
+        $index_content = "<?php\n";
+        $index_content .= "if (!defined(\"ABSPATH\")) {return;}\n";
+        $index_content .= "/*\n";
+        $index_content .= " * This is an auto-generated file by Fluent Snippets plugin.\n";
+        $index_content .= " * Please do not edit manually.\n";
+        $index_content .= " */\n";
+        $index_content .= "return " . var_export($fluent_data, true) . ";\n";
+        
+        // Write the index file
+        file_put_contents($index_file, $index_content);
+        
+        error_log('IDE Snippets Bridge: Regenerated FluentSnippets-compatible index.php with ' . count($published_snippets) . ' published and ' . count($draft_snippets) . ' draft snippets');
+    }
+
+    /**
      * Toggle FluentSnippets active status
      *
      * @since 1.3.1
@@ -520,8 +660,10 @@ class IDE_Snippets_API {
      * @return WP_REST_Response
      */
     public function toggle_fluent_snippet(WP_REST_Request $request) {
-        $id = $request['id'];
+        error_log('IDE Snippets Bridge: toggle_fluent_snippet called with ID: ' . $request['id']);
+        $id = str_replace('FS', '', $request['id']);
         $params = $request->get_json_params();
+        error_log('IDE Snippets Bridge: Processed ID: ' . $id . ', Active plugin: ' . $this->active_plugin);
         
         // Find FluentSnippets storage path
         $possible_paths = [
@@ -543,53 +685,50 @@ class IDE_Snippets_API {
             return new WP_Error('not_found', 'FluentSnippets storage directory not found', ['status' => 404]);
         }
         
-        // Find the existing file for this ID
+        $active = isset($params['active']) ? (bool) $params['active'] : false;
+        $disabled_dir = $fluent_snippets_path . '/disabled';
+
+        // Find the snippet file in either the main or disabled directory
         $files = glob($fluent_snippets_path . '/' . $id . '-*.php');
-        
-        if (empty($files)) {
-            return new WP_Error('not_found', 'FluentSnippet file not found', ['status' => 404]);
+        $disabled_files = glob($disabled_dir . '/' . $id . '-*.php');
+
+        $source_path = null;
+        if (!empty($files)) {
+            $source_path = $files[0];
+        } elseif (!empty($disabled_files)) {
+            $source_path = $disabled_files[0];
         }
-        
-        $file_path = $files[0]; // Take the first match
-        $active = isset($params['active']) ? $params['active'] : true;
-        
+
+        if (!$source_path) {
+            return new WP_Error('not_found', 'FluentSnippet file not found in any directory', ['status' => 404]);
+        }
+
+        $filename = basename($source_path);
+        $main_path = $fluent_snippets_path . '/' . $filename;
+        $disabled_path = $disabled_dir . '/' . $filename;
+
         if ($active) {
-            // If activating, ensure file exists in the main directory
-            if (!file_exists($file_path)) {
-                return new WP_Error('file_error', 'Cannot activate: file not found', ['status' => 404]);
+            // Activating: move from 'disabled' to main directory
+            if (file_exists($disabled_path)) {
+                if (!rename($disabled_path, $main_path)) {
+                    return new WP_Error('file_error', 'Failed to activate snippet by moving file.', ['status' => 500]);
+                }
             }
         } else {
-            // If deactivating, move file to a disabled subdirectory
-            $disabled_dir = $fluent_snippets_path . '/disabled';
+            // Deactivating: move from main to 'disabled' directory
             if (!is_dir($disabled_dir)) {
                 wp_mkdir_p($disabled_dir);
             }
-            
-            $filename = basename($file_path);
-            $disabled_path = $disabled_dir . '/' . $filename;
-            
-            if (file_exists($file_path)) {
-                $result = rename($file_path, $disabled_path);
-                if (!$result) {
-                    return new WP_Error('file_error', 'Failed to deactivate snippet', ['status' => 500]);
+            if (file_exists($main_path)) {
+                if (!rename($main_path, $disabled_path)) {
+                    return new WP_Error('file_error', 'Failed to deactivate snippet by moving file.', ['status' => 500]);
                 }
             }
         }
         
-        // If activating and file is in disabled directory, move it back
-        if ($active) {
-            $disabled_dir = $fluent_snippets_path . '/disabled';
-            $filename = basename($file_path);
-            $disabled_path = $disabled_dir . '/' . $filename;
-            
-            if (file_exists($disabled_path) && !file_exists($file_path)) {
-                $result = rename($disabled_path, $file_path);
-                if (!$result) {
-                    return new WP_Error('file_error', 'Failed to activate snippet', ['status' => 500]);
-                }
-            }
-        }
-        
+        // Regenerate the index.php file instead of just deleting it
+        $this->regenerate_fluent_snippets_index($fluent_snippets_path);
+
         // Return success response
         return new WP_REST_Response([
             'success' => true,

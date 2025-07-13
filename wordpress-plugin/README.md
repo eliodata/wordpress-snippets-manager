@@ -28,7 +28,7 @@ This plugin creates a secure REST API that allows compatible IDE extensions to:
 
 - **WordPress**: 5.0 or higher
 - **PHP**: 7.4 or higher
-- **Code Snippets Plugin**: Required for snippet management
+- **Snippet Management Plugin**: Either Code Snippets or FluentSnippets plugin
 - **Administrator Access**: Required for API authentication
 
 ## 🛠️ Installation
@@ -50,7 +50,7 @@ This plugin creates a secure REST API that allows compatible IDE extensions to:
 
 ### WordPress Setup
 
-1. **Install Code Snippets Plugin**: This plugin requires the popular [Code Snippets](https://wordpress.org/plugins/code-snippets/) plugin to manage your snippets
+1. **Install Snippet Management Plugin**: This plugin requires either the [Code Snippets](https://wordpress.org/plugins/code-snippets/) plugin OR the [FluentSnippets](https://wordpress.org/plugins/fluent-snippets/) plugin to manage your snippets
 2. **Activate the Bridge**: Once both plugins are active, the API endpoints are automatically available
 3. **No additional configuration needed**: The plugin works out of the box
 
@@ -81,6 +81,7 @@ The plugin provides the following REST API endpoints:
 ## 🤝 Compatibility
 
 - **Code Snippets Plugin**: Full compatibility with all versions
+- **FluentSnippets Plugin**: Full compatibility with advanced snippet management features
 - **WordPress Multisite**: Supported
 - **Popular Themes**: Works with any WordPress theme
 - **Other Plugins**: No known conflicts
@@ -92,6 +93,20 @@ The plugin provides the following REST API endpoints:
 - **Community**: Join our [Discord community](https://discord.gg/ide-snippets)
 
 ## 🔄 Changelog
+
+### 1.3.1
+- Fixed critical issue with FluentSnippets index.php file deletion during snippet toggle
+- Improved FluentSnippets compatibility with proper draft/published status handling
+- Enhanced snippet deactivation to maintain visibility in FluentSnippets interface
+- Added automatic index.php regeneration with correct Fluent Snippets data structure
+- Improved error handling and debug logging for FluentSnippets operations
+
+### 1.3.0
+- Added full support for FluentSnippets plugin alongside Code Snippets
+- Enhanced API endpoints to handle multiple snippet management plugins
+- Improved snippet parsing for FluentSnippets with Internal Doc sections
+- Added intelligent ID handling for different snippet plugin formats
+- Enhanced search capabilities across multiple snippet providers
 
 ### 1.1.0
 - Rebranded to IDE Code Snippets Bridge

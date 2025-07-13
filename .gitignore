@@ -24,3 +24,18 @@ yarn-error.log*
 .snippet_cache/
 .snippet_backups/
 back/
+
+# Temporary files
+*.tmp
+*.temp
+*.zip
+*.tar.gz
+
+# Test files
+test-*
+diagnostic-*
+*-test.*
+
+# Documentation drafts
+*-draft.md
+*-guide.md

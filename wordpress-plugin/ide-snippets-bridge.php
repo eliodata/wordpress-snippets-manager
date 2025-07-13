@@ -3,7 +3,7 @@
  * Plugin Name: IDE Code Snippets Bridge
  * Plugin URI: https://github.com/ide-snippets/wordpress-snippets-manager
  * Description: Bridge plugin that provides a secure REST API to connect your WordPress site with IDE extensions (like Trae AI, VS Code) for seamless code snippet management with AI-powered editing capabilities.
- * Version: 1.3.0
+ * Version: 1.3.1
  * Author: IDE Snippets by eliodata.com
  * Author URI: https://eliodata.com
  * License: GPL v3 or later
@@ -23,7 +23,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('IDE_SNIPPETS_BRIDGE_VERSION', '1.3.0');
+define('IDE_SNIPPETS_BRIDGE_VERSION', '1.3.1');
 define('IDE_SNIPPETS_BRIDGE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('IDE_SNIPPETS_BRIDGE_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('IDE_SNIPPETS_BRIDGE_PLUGIN_BASENAME', plugin_basename(__FILE__));
@@ -79,8 +79,9 @@ class IDE_Snippets_Bridge {
         add_action('rest_api_init', array($this, 'add_status_endpoint'));
 
         // Plugin activation/deactivation hooks
-        register_activation_hook(__FILE__, array($this, 'activate'));
-        register_deactivation_hook(__FILE__, array($this, 'deactivate'));
+        // Plugin activation/deactivation hooks
+        register_activation_hook(IDE_SNIPPETS_BRIDGE_PLUGIN_BASENAME, array($this, 'activate'));
+        register_deactivation_hook(IDE_SNIPPETS_BRIDGE_PLUGIN_BASENAME, array($this, 'deactivate'));
     }
 
     /**
@@ -206,9 +207,9 @@ class IDE_Snippets_Bridge {
     }
 
     /**
-     * Plugin activation
+     * Plugin activation callback
      *
-     * @since 1.0.0
+     * @since 1.3.1
      */
     public function activate() {
         // Check WordPress version
@@ -223,18 +224,21 @@ class IDE_Snippets_Bridge {
             wp_die(esc_html__('IDE Code Snippets Bridge requires PHP 7.4 or higher.', 'ide-snippets-bridge'));
         }
 
-        // Flush rewrite rules
+        // Ensure the API routes are registered and rewrite rules are flushed.
+        $this->init_api();
         flush_rewrite_rules();
+        error_log('IDE Snippets Bridge: Plugin activated and rewrite rules flushed.');
     }
 
     /**
-     * Plugin deactivation
+     * Plugin deactivation callback
      *
-     * @since 1.0.0
+     * @since 1.3.1
      */
     public function deactivate() {
-        // Flush rewrite rules
+        // Flush rewrite rules to remove the API endpoints.
         flush_rewrite_rules();
+        error_log('IDE Snippets Bridge: Plugin deactivated and rewrite rules flushed.');
     }
 }
 

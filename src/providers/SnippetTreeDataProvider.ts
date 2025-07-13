@@ -122,6 +122,20 @@ export class SnippetTreeDataProvider implements vscode.TreeDataProvider<Snippet>
         return this.lastResultCount;
     }
 
+    async toggleSnippet(snippet: Snippet): Promise<void> {
+        if ('toggleSnippet' in this.snippetProvider) {
+            const provider = this.snippetProvider as any;
+            const newStatus = !snippet.active;
+            const success = await provider.toggleSnippet(snippet.id, newStatus);
+            if (success) {
+                vscode.window.showInformationMessage(`Snippet "${snippet.name}" ${newStatus ? 'activated' : 'deactivated'}.`);
+                this.refresh();
+            } else {
+                vscode.window.showErrorMessage(`Failed to toggle snippet "${snippet.name}".`);
+            }
+        }
+    }
+
     getStatusMessage(): string {
         if (this.searchTerm) {
             const count = this.lastResultCount;

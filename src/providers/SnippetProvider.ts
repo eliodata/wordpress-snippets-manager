@@ -168,6 +168,44 @@ ${snippet.code}`;
         }
     }
 
+    public async toggleSnippet(id: string | number, active: boolean): Promise<boolean> {
+        console.log(`Toggling snippet ${id} to ${active}`);
+        if (!this.apiConnector) {
+            throw new Error('Le fournisseur n\'est pas initialisé');
+        }
+
+        if (typeof id === 'string' && id.startsWith('FS')) {
+            return false;
+        }
+
+        try {
+            const response = await this.apiConnector.updateSnippet(id as number, { active });
+            console.log(`API response for toggle snippet ${id}:`, response);
+
+            // Mettre à jour le cache local
+            const snippet = await this.getSnippet(id);
+            if (snippet) {
+                const filePath = this.getSnippetCachePath(snippet.id);
+                const content = `<?php
+/**
+ * Snippet ID: ${snippet.id}
+ * Name: ${snippet.name}
+ * Description: ${snippet.description}
+ * @active ${active}
+ */
+
+${snippet.code}`;
+                await fs.writeFile(filePath, content);
+            }
+            this._onDidChangeSnippets.fire();
+            return true;
+        } catch (error: any) {
+            console.error(`Error toggling snippet ${id}:`, error);
+            vscode.window.showErrorMessage('Erreur lors du changement de statut du snippet: ' + (error?.message || 'Erreur inconnue'));
+            return false;
+        }
+    }
+
     public async deleteSnippet(id: string | number): Promise<boolean> {
         if (!this.apiConnector) {
             throw new Error('Le fournisseur n\'est pas initialisé');
