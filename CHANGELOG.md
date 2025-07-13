@@ -28,10 +28,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Connection Storage**: Moved to more robust multi-site configuration structure
 
 ### Fixed
-- **TypeScript Compilation**: Resolved type issues with new connection configuration structure
+- **TypeScript Compilation**: Resolved compilation issues with updated architecture
 - **FluentSnippets Toggle**: Fixed active/inactive status inconsistency and toggle functionality
 - **FluentSnippets Status Detection**: Improved status parsing to handle various status values ('published', 'active', '1', etc.)
 - **FluentSnippets API Integration**: Added dedicated toggle endpoint for proper status management
+- **WordPress Plugin API**: Added missing `/fluent-snippets/{id}/toggle` endpoint
+- **Code Snippets Toggle**: Fixed toggle functionality for Code Snippets by correcting table name usage
+- **FluentSnippets Status Display**: Implemented proper active/inactive detection using file system location
 
 ## [2.1.0] - 2024-07-13
 

@@ -126,6 +126,25 @@ class IDE_Snippets_API {
                 ],
             ]
         );
+
+        // FluentSnippets toggle endpoint
+        register_rest_route($this->namespace, '/fluent-snippets/(?P<id>\d+)/toggle',
+            [
+                [
+                    'methods' => WP_REST_Server::EDITABLE,
+                    'callback' => [$this, 'toggle_fluent_snippet'],
+                    'permission_callback' => [$this, 'check_permission'],
+                    'args' => [
+                        'id' => [
+                            'required' => true,
+                            'validate_callback' => function($param, $request, $key) {
+                                return is_numeric($param);
+                            }
+                        ],
+                    ],
+                ],
+            ]
+        );
     }
 
     /**
@@ -221,7 +240,9 @@ class IDE_Snippets_API {
         global $wpdb;
         $id = $request['id'];
         $params = $request->get_json_params();
-        $table_name = $this->get_snippets_table_name();
+        
+        // Use the correct table name based on active plugin
+        $table_name = $wpdb->prefix . 'snippets'; // Always use Code Snippets table for this endpoint
 
         $data = [];
         if (isset($params['name'])) {
@@ -248,7 +269,9 @@ class IDE_Snippets_API {
         }
 
         $updated_snippet = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}snippets WHERE id = %d", $id));
-        $updated_snippet->active = (bool) $updated_snippet->active;
+        if ($updated_snippet) {
+            $updated_snippet->active = (bool) $updated_snippet->active;
+        }
 
         return new WP_REST_Response($updated_snippet, 200);
     }
@@ -293,10 +316,15 @@ class IDE_Snippets_API {
         
         $snippets = [];
         
-        // Read all .php files directly from the directory
-        $files = glob($fluent_snippets_path . '/*.php');
+        // Read all .php files directly from the directory (active snippets)
+        $active_files = glob($fluent_snippets_path . '/*.php');
         
-        foreach ($files as $file_path) {
+        // Read all .php files from disabled directory (inactive snippets)
+        $disabled_dir = $fluent_snippets_path . '/disabled';
+        $disabled_files = is_dir($disabled_dir) ? glob($disabled_dir . '/*.php') : [];
+        
+        // Process active files
+        foreach ($active_files as $file_path) {
             $filename = basename($file_path);
             
             // Skip index.php
@@ -329,7 +357,49 @@ class IDE_Snippets_API {
                 'name' => $name,
                 'description' => 'FluentSnippet: ' . $name,
                 'code' => $clean_code,
-                'active' => true, // Assume all files in directory are active
+                'active' => true, // Files in main directory are active
+                'scope' => 'backend',
+                'created' => date('Y-m-d H:i:s', filemtime($file_path)),
+                'modified' => date('Y-m-d H:i:s', filemtime($file_path)),
+                'tags' => 'fluent-snippets'
+            ];
+        }
+        
+        // Process disabled files
+        foreach ($disabled_files as $file_path) {
+            $filename = basename($file_path);
+            
+            // Skip index.php
+            if ($filename === 'index.php') {
+                continue;
+            }
+            
+            $snippet_content = file_get_contents($file_path);
+            
+            // Extract ID from filename
+            preg_match('/^(\d+)-/', $filename, $matches);
+            $id = isset($matches[1]) ? intval($matches[1]) : rand(1000, 9999);
+            
+            // Extract name from filename (remove ID and .php extension)
+            $name = preg_replace('/^\d+-/', '', $filename);
+            $name = str_replace('.php', '', $name);
+            $name = str_replace('-', ' ', $name);
+            $name = ucwords($name);
+            
+            // Clean the PHP content - remove opening PHP tag and extract actual code
+            $clean_code = $snippet_content;
+            // Remove opening PHP tag
+            $clean_code = preg_replace('/^<\?php\s*/', '', $clean_code);
+            // Remove closing PHP tag if present
+            $clean_code = preg_replace('/\?>\s*$/', '', $clean_code);
+            $clean_code = trim($clean_code);
+            
+            $snippets[] = [
+                'id' => $id,
+                'name' => $name,
+                'description' => 'FluentSnippet: ' . $name,
+                'code' => $clean_code,
+                'active' => false, // Files in disabled directory are inactive
                 'scope' => 'backend',
                 'created' => date('Y-m-d H:i:s', filemtime($file_path)),
                 'modified' => date('Y-m-d H:i:s', filemtime($file_path)),
@@ -440,5 +510,92 @@ class IDE_Snippets_API {
         }
         
         return null;
+    }
+
+    /**
+     * Toggle FluentSnippets active status
+     *
+     * @since 1.3.1
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response
+     */
+    public function toggle_fluent_snippet(WP_REST_Request $request) {
+        $id = $request['id'];
+        $params = $request->get_json_params();
+        
+        // Find FluentSnippets storage path
+        $possible_paths = [
+            WP_CONTENT_DIR . '/fluent-snippet-storage',
+            WP_CONTENT_DIR . '/fluent-snippets-storage',
+            wp_upload_dir()['basedir'] . '/fluent-snippet-storage',
+            wp_upload_dir()['basedir'] . '/fluent-snippets-storage'
+        ];
+        
+        $fluent_snippets_path = null;
+        foreach ($possible_paths as $path) {
+            if (is_dir($path)) {
+                $fluent_snippets_path = $path;
+                break;
+            }
+        }
+        
+        if (!$fluent_snippets_path) {
+            return new WP_Error('not_found', 'FluentSnippets storage directory not found', ['status' => 404]);
+        }
+        
+        // Find the existing file for this ID
+        $files = glob($fluent_snippets_path . '/' . $id . '-*.php');
+        
+        if (empty($files)) {
+            return new WP_Error('not_found', 'FluentSnippet file not found', ['status' => 404]);
+        }
+        
+        $file_path = $files[0]; // Take the first match
+        $active = isset($params['active']) ? $params['active'] : true;
+        
+        if ($active) {
+            // If activating, ensure file exists in the main directory
+            if (!file_exists($file_path)) {
+                return new WP_Error('file_error', 'Cannot activate: file not found', ['status' => 404]);
+            }
+        } else {
+            // If deactivating, move file to a disabled subdirectory
+            $disabled_dir = $fluent_snippets_path . '/disabled';
+            if (!is_dir($disabled_dir)) {
+                wp_mkdir_p($disabled_dir);
+            }
+            
+            $filename = basename($file_path);
+            $disabled_path = $disabled_dir . '/' . $filename;
+            
+            if (file_exists($file_path)) {
+                $result = rename($file_path, $disabled_path);
+                if (!$result) {
+                    return new WP_Error('file_error', 'Failed to deactivate snippet', ['status' => 500]);
+                }
+            }
+        }
+        
+        // If activating and file is in disabled directory, move it back
+        if ($active) {
+            $disabled_dir = $fluent_snippets_path . '/disabled';
+            $filename = basename($file_path);
+            $disabled_path = $disabled_dir . '/' . $filename;
+            
+            if (file_exists($disabled_path) && !file_exists($file_path)) {
+                $result = rename($disabled_path, $file_path);
+                if (!$result) {
+                    return new WP_Error('file_error', 'Failed to activate snippet', ['status' => 500]);
+                }
+            }
+        }
+        
+        // Return success response
+        return new WP_REST_Response([
+            'success' => true,
+            'message' => 'FluentSnippet status toggled successfully',
+            'active' => $active,
+            'id' => $id
+        ], 200);
     }
 }
