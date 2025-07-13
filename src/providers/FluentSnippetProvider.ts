@@ -459,6 +459,8 @@ ${snippet.code}`;
         }
 
         try {
+            console.log(`[DEBUG] Toggling FluentSnippet with ID: ${id}`);
+            
             // Get current snippet to determine new status
             const snippet = await this.getSnippet(id);
             if (!snippet) {
@@ -466,14 +468,21 @@ ${snippet.code}`;
                 return false;
             }
 
+            console.log(`[DEBUG] Found snippet: ${snippet.name}, current status: ${snippet.active}`);
+
             // Extract numeric ID from FS prefixed ID
             const numericId = typeof id === 'string' && id.startsWith('FS') 
                 ? id.substring(2) 
                 : id;
 
+            console.log(`[DEBUG] Using numeric ID for API call: ${numericId}`);
+
             // Toggle the status
             const newStatus = !snippet.active;
+            console.log(`[DEBUG] New status will be: ${newStatus}`);
+            
             const response = await this.apiConnector.toggleFluentSnippet(numericId, newStatus);
+            console.log(`[DEBUG] API response:`, response);
             
             if (response && response.success) {
                 // Update cache file with new status
@@ -486,12 +495,15 @@ ${snippet.code}`;
                 );
                 return true;
             } else {
-                vscode.window.showErrorMessage('Failed to toggle snippet status.');
+                vscode.window.showErrorMessage(`Failed to toggle snippet status. Response: ${JSON.stringify(response)}`);
                 return false;
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error toggling FluentSnippet:', error);
-            vscode.window.showErrorMessage('Error toggling snippet: ' + error);
+            const errorMessage = error.response ? 
+                `HTTP ${error.response.status}: ${error.response.statusText}` : 
+                error.message || error.toString();
+            vscode.window.showErrorMessage(`Error toggling snippet: ${errorMessage}`);
             return false;
         }
     }

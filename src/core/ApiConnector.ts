@@ -79,12 +79,18 @@ export class ApiConnector {
     }
 
     public async toggleFluentSnippet(id: string | number, active: boolean) {
-        const response = await axios.put(`${this.apiUrl}wp-json/ide/v1/fluent-snippets/${id}/toggle`, 
+        const url = `${this.apiUrl}wp-json/ide/v1/fluent-snippets/${id}/toggle`;
+        console.log(`[DEBUG] Making API call to: ${url}`);
+        console.log(`[DEBUG] Payload:`, { active: active });
+        
+        const response = await axios.put(url, 
             { active: active }, 
             {
                 headers: this.getAuthHeaders()
             }
         );
+        console.log(`[DEBUG] API response status: ${response.status}`);
+        console.log(`[DEBUG] API response data:`, response.data);
         return response.data;
     }
 }
