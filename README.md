@@ -10,6 +10,7 @@ This extension for VS Code & Trae AI transforms the way you handle WordPress sni
 
 *   **AI-Powered Editing**: Simply describe the changes you want. From simple design to complex logic modifications, the AI agent handles the coding.
 *   **Multi-Model Support**: Choose from a range of powerful AI models like **Gemini, GPT-4, and Claude** to suit your task.
+*   **Multi-Site Management**: 🆕 Manage multiple WordPress sites from a single interface. Switch between projects instantly.
 *   **Multi-Plugin Support**: Full compatibility with both **Code Snippets** and **FluentSnippets** WordPress plugins with seamless switching.
 *   **Advanced Search**: Search snippets by name, description, content, or ID (supports both numeric IDs like "2" and prefixed IDs like "FS2").
 *   **Seamless Snippet Management**: List, view, and edit all your WordPress snippets directly within the IDE.
@@ -54,6 +55,23 @@ This extension supports multiple WordPress snippet management plugins:
 - Code Snippets use numeric IDs (e.g., search "15" to find snippet #15)
 - FluentSnippets use prefixed IDs (e.g., search "FS3" or just "3" to find FluentSnippet #3)
 - The extension automatically handles ID conflicts and provides intelligent search across both systems
+
+### 🌐 Multi-Site Management
+
+**NEW**: Manage multiple WordPress sites from a single interface!
+
+*   **Multiple Connections**: Configure and store connections to different WordPress sites
+*   **Quick Switching**: Switch between sites instantly with a single click
+*   **Custom Names**: Give meaningful names to your connections ("Production", "Staging", "Client Site")
+*   **Secure Storage**: All connection data is securely stored in VS Code's secret storage
+*   **Easy Management**: Add, remove, and organize your connections through an intuitive interface
+
+**Getting Started with Multi-Site**:
+1. Use `WordPress Snippets: Manage Connections` to add your first site
+2. Click the 🌍 icon in the toolbar to quickly switch between sites
+3. Use the 🖥️ icon for full connection management
+
+📖 **[Complete Multi-Site Guide](MULTI_SITE_GUIDE.md)**
 
 ---
 

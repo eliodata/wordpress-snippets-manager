@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2024-12-XX
+
+### Added
+- **🌐 Multi-Site Management**: Complete support for managing multiple WordPress sites from a single interface
+  - Configure and store multiple WordPress site connections
+  - Quick switching between sites with visual indicators (🟢 for active, ⚪ for inactive)
+  - Custom naming for connections ("Production", "Staging", "Client Site", etc.)
+  - Secure storage of all connection data in VS Code's secret storage
+- **New Commands**:
+  - `WordPress Snippets: Manage Connections` - Full connection management interface
+  - `WordPress Snippets: Switch Connection` - Quick connection switching
+- **Enhanced UI**:
+  - 🖥️ Connection manager icon in toolbar
+  - 🌍 Quick connection switcher icon in toolbar
+  - Visual connection status indicators
+- **Backward Compatibility**: Existing single-site configurations are automatically migrated to the new multi-site system
+
+### Changed
+- **ConfigManager**: Extended to support multiple connections while maintaining backward compatibility
+- **Extension Activation**: Now checks for existing connections and provides appropriate setup flow
+- **Connection Storage**: Moved to more robust multi-site configuration structure
+
+### Fixed
+- **TypeScript Compilation**: Resolved type issues with new connection configuration structure
+
 ## [2.1.0] - 2024-07-13
 
 ### Added

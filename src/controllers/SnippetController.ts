@@ -46,12 +46,21 @@ export class SnippetController {
     }
 
     public async reconfigure() {
-        const newConfig = await this.configManager.switchPlugin();
+        const newConfig = await this.configManager.manageConnections();
         if (newConfig) {
             // The provider will be updated with the new config, so we just need to refresh the tree.
             vscode.commands.executeCommand('wordpress-snippets.refreshSnippets');
         } else {
-            vscode.window.showInformationMessage('Switch plugin cancelled.');
+            vscode.window.showInformationMessage('Configuration annulée.');
+        }
+    }
+    
+    public async switchPlugin() {
+        const newConfig = await this.configManager.switchPlugin();
+        if (newConfig) {
+            vscode.commands.executeCommand('wordpress-snippets.refreshSnippets');
+        } else {
+            vscode.window.showInformationMessage('Changement de plugin annulé.');
         }
     }
 

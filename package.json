@@ -2,7 +2,7 @@
     "name": "wordpress-snippets-manager",
     "displayName": "Trae AI - WordPress Snippet Manager",
     "description": "Supercharge your WordPress development with AI-powered snippet management directly in your IDE.",
-    "version": "2.1.0",
+    "version": "2.2.0",
     "publisher": "trae-ai",
     "author": "eliodata.com",
     "repository": {
@@ -99,6 +99,16 @@
                 "command": "wordpress-snippets.switchPlugin",
                 "title": "WordPress Snippets: Switch Snippet Plugin",
                 "icon": "$(arrow-swap)"
+            },
+            {
+                "command": "wordpressSnippets.manageConnections",
+                "title": "WordPress Snippets: Manage Connections",
+                "icon": "$(server-environment)"
+            },
+            {
+                "command": "wordpressSnippets.switchConnection",
+                "title": "WordPress Snippets: Switch Connection",
+                "icon": "$(globe)"
             }
 
         ],
@@ -157,6 +167,18 @@
                     "when": "view == wordpress-snippets-view",
                     "group": "navigation@9",
                     "icon": "$(arrow-swap)"
+                },
+                {
+                    "command": "wordpressSnippets.manageConnections",
+                    "when": "view == wordpress-snippets-view",
+                    "group": "navigation@10",
+                    "icon": "$(server-environment)"
+                },
+                {
+                    "command": "wordpressSnippets.switchConnection",
+                    "when": "view == wordpress-snippets-view",
+                    "group": "navigation@11",
+                    "icon": "$(globe)"
                 }
             ],
             "view/item/context": [

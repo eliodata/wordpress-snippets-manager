@@ -23,9 +23,17 @@ export interface SnippetUpdateData extends SnippetCreateData {
 }
 
 export interface WordPressConnectionConfig {
+    id: string;
+    name: string;
     siteUrl: string;
     username: string;
     applicationPassword: string;
     plugin: 'Code Snippets' | 'FluentSnippets';
     fluentSnippetsPath?: string;
+    isActive?: boolean;
+}
+
+export interface MultiSiteConfig {
+    connections: WordPressConnectionConfig[];
+    activeConnectionId?: string;
 }

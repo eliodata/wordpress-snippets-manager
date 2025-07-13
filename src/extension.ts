@@ -6,10 +6,23 @@ import { ConfigManager } from './core/ConfigManager';
 
 export async function activate(context: vscode.ExtensionContext) {
     const configManager = new ConfigManager(context);
-    let config = await configManager.getConfig();
+    let config = await configManager.getActiveConnection();
 
     if (!config) {
-        config = await configManager.promptForConfig();
+        // Vérifier s'il y a des connexions existantes
+        const connections = await configManager.getAllConnections();
+        if (connections.length > 0) {
+            config = await configManager.manageConnections();
+        } else {
+            config = await configManager.promptForConfig();
+            if (config) {
+                config.id = `wp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                config.name = config.name || config.siteUrl;
+                await configManager.addConnection(config);
+                await configManager.setActiveConnection(config.id);
+            }
+        }
+        
         if (!config) {
             return; // User cancelled the configuration
         }
@@ -94,6 +107,51 @@ export async function activate(context: vscode.ExtensionContext) {
                     provider = newProvider;
                     snippetTreeDataProvider.updateProvider(provider);
                     snippetTreeDataProvider.refresh();
+                }
+            }
+        }),
+        vscode.commands.registerCommand('wordpressSnippets.manageConnections', async () => {
+            const newConfig = await configManager.manageConnections();
+            if (newConfig) {
+                const newProvider = await createSnippetProvider(context, newConfig);
+                if (newProvider) {
+                    await newProvider.initialize();
+                    provider = newProvider;
+                    snippetTreeDataProvider.updateProvider(provider);
+                    snippetTreeDataProvider.refresh();
+                }
+            }
+        }),
+        vscode.commands.registerCommand('wordpressSnippets.switchConnection', async () => {
+            const connections = await configManager.getAllConnections();
+            if (connections.length === 0) {
+                vscode.window.showInformationMessage('Aucune connexion configurée.');
+                return;
+            }
+            
+            const activeConnection = await configManager.getActiveConnection();
+            const connectionOptions = connections.map(conn => ({
+                label: conn.name || conn.siteUrl,
+                description: `${conn.siteUrl} (${conn.plugin})`,
+                detail: activeConnection?.id === conn.id ? '🟢 Connexion active' : '',
+                connection: conn
+            }));
+            
+            const selected = await vscode.window.showQuickPick(connectionOptions, {
+                placeHolder: 'Choisir la connexion WordPress active'
+            });
+            
+            if (selected && selected.connection.id !== activeConnection?.id) {
+                const newConfig = await configManager.setActiveConnection(selected.connection.id);
+                if (newConfig) {
+                    const newProvider = await createSnippetProvider(context, newConfig);
+                    if (newProvider) {
+                        await newProvider.initialize();
+                        provider = newProvider;
+                        snippetTreeDataProvider.updateProvider(provider);
+                        snippetTreeDataProvider.refresh();
+                        vscode.window.showInformationMessage(`Connexion active: ${selected.label}`);
+                    }
                 }
             }
         })
