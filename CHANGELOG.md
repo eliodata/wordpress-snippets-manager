@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2024-07-13
+
+### Added
+- **FluentSnippets Support**: Full integration with FluentSnippets plugin alongside existing Code Snippets support
+- **Multi-Plugin Architecture**: Seamless switching between Code Snippets and FluentSnippets providers
+- **Enhanced Search Functionality**: 
+  - Search by ID now supports both numeric IDs (e.g., "2") and prefixed IDs (e.g., "FS2")
+  - Intelligent ID resolution for FluentSnippets with "FS" prefix system
+- **Improved Name Display**: FluentSnippets now display correct names extracted from Internal Doc sections
+- **Conflict Resolution**: Implemented ID prefixing system to prevent conflicts between different snippet plugins
+
+### Changed
+- **Repository URL**: Updated from trae-ai to eliodata organization
+- **Snippet Provider Factory**: Refactored to support multiple snippet plugin providers
+- **Cache System**: Enhanced to handle mixed ID types (string/number) for different providers
+- **Search Algorithm**: Improved to handle both numeric and prefixed ID searches
+
+### Fixed
+- **FluentSnippets Name Extraction**: Corrected display of snippet names instead of descriptions
+- **ID Search Issues**: Resolved search functionality for FluentSnippets with FS-prefixed IDs
+- **Provider Switching**: Fixed seamless switching between different snippet plugin providers
+
+## [2.0.0] - 2024-07-XX
+
+### Added
+- **Multi-Provider Support**: Foundation for supporting multiple WordPress snippet plugins
+- **Enhanced UI**: Improved tree view with better filtering and sorting options
+- **Provider Switching**: Added ability to switch between different snippet plugin providers
+
 ## [1.2.0] - 2024-01-XX
 
 ### Changed

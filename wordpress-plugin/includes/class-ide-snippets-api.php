@@ -27,12 +27,31 @@ if (!defined('ABSPATH')) {
 class IDE_Snippets_API {
 
     /**
+     * Constructor
+     *
+     * @since 1.2.0
+     */
+    public function __construct() {
+        if (is_plugin_active('fluent-snippets/fluent-snippets.php')) {
+            $this->active_plugin = 'FluentSnippets';
+        }
+    }
+
+    /**
      * API namespace for IDE snippets endpoints.
      *
      * @since 1.0.0
      * @var string
      */
     protected $namespace = 'ide/v1';
+
+    /**
+     * Active snippet plugin.
+     *
+     * @since 1.2.0
+     * @var string
+     */
+    protected $active_plugin = 'CodeSnippets'; // Default to Code Snippets
 
     /**
      * Register REST API routes
@@ -78,6 +97,17 @@ class IDE_Snippets_API {
                 ],
             ]
         );
+
+        // FluentSnippets specific endpoint
+        register_rest_route($this->namespace, '/fluent-snippets',
+            [
+                [
+                    'methods' => WP_REST_Server::READABLE,
+                    'callback' => [$this, 'get_fluent_snippets'],
+                    'permission_callback' => [$this, 'check_permission'],
+                ],
+            ]
+        );
     }
 
     /**
@@ -104,6 +134,9 @@ class IDE_Snippets_API {
      */
     private function get_snippets_table_name() {
         global $wpdb;
+        if ('FluentSnippets' === $this->active_plugin) {
+            return $wpdb->prefix . 'fluent_snippets';
+        }
         return $wpdb->prefix . 'snippets';
     }
 
@@ -210,5 +243,115 @@ class IDE_Snippets_API {
         $wpdb->delete($table_name, ['id' => $id]);
 
         return new WP_REST_Response(null, 204);
+    }
+
+    /**
+     * Get FluentSnippets from file system
+     *
+     * @since 1.2.0
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response
+     */
+    public function get_fluent_snippets(WP_REST_Request $request) {
+        // Find FluentSnippets storage path
+        $possible_paths = [
+            WP_CONTENT_DIR . '/fluent-snippet-storage',
+            WP_CONTENT_DIR . '/fluent-snippets-storage',
+            wp_upload_dir()['basedir'] . '/fluent-snippet-storage',
+            wp_upload_dir()['basedir'] . '/fluent-snippets-storage'
+        ];
+        
+        $fluent_snippets_path = null;
+        foreach ($possible_paths as $path) {
+            if (is_dir($path)) {
+                $fluent_snippets_path = $path;
+                break;
+            }
+        }
+        
+        if (!$fluent_snippets_path) {
+            return new WP_Error('not_found', 'FluentSnippets storage directory not found', ['status' => 404]);
+        }
+        
+        $snippets = [];
+        
+        // Read all .php files directly from the directory
+        $files = glob($fluent_snippets_path . '/*.php');
+        
+        foreach ($files as $file_path) {
+            $filename = basename($file_path);
+            
+            // Skip index.php
+            if ($filename === 'index.php') {
+                continue;
+            }
+            
+            $snippet_content = file_get_contents($file_path);
+            
+            // Extract ID from filename
+            preg_match('/^(\d+)-/', $filename, $matches);
+            $id = isset($matches[1]) ? intval($matches[1]) : rand(1000, 9999);
+            
+            // Extract name from filename (remove ID and .php extension)
+            $name = preg_replace('/^\d+-/', '', $filename);
+            $name = str_replace('.php', '', $name);
+            $name = str_replace('-', ' ', $name);
+            $name = ucwords($name);
+            
+            // Clean the PHP content - remove opening PHP tag and extract actual code
+            $clean_code = $snippet_content;
+            // Remove opening PHP tag
+            $clean_code = preg_replace('/^<\?php\s*/', '', $clean_code);
+            // Remove closing PHP tag if present
+            $clean_code = preg_replace('/\?>\s*$/', '', $clean_code);
+            $clean_code = trim($clean_code);
+            
+            $snippets[] = [
+                'id' => $id,
+                'name' => $name,
+                'description' => 'FluentSnippet: ' . $name,
+                'code' => $clean_code,
+                'active' => true, // Assume all files in directory are active
+                'scope' => 'backend',
+                'created' => date('Y-m-d H:i:s', filemtime($file_path)),
+                'modified' => date('Y-m-d H:i:s', filemtime($file_path)),
+                'tags' => 'fluent-snippets'
+            ];
+        }
+        
+        return new WP_REST_Response(['snippets' => $snippets], 200);
+    }
+    
+    /**
+     * Parse FluentSnippets index.php file
+     *
+     * @since 1.2.0
+     * @param string $content
+     * @return array|null
+     */
+    private function parse_fluent_snippets_index($content) {
+        // Remove PHP opening tag and security check
+        $content = preg_replace('/<\?php[\s\S]*?\*\//', '', $content);
+        $content = preg_replace('/if \(!defined\("ABSPATH"\)\) \{return;\}/', '', $content);
+        
+        // Extract the array part
+        if (preg_match('/return\s+(array\([\s\S]*\));/', $content, $matches)) {
+            $array_string = $matches[1];
+            
+            // Simple PHP array to JSON conversion
+            $array_string = preg_replace('/array\s*\(/', '[', $array_string);
+            $array_string = preg_replace('/\)/', ']', $array_string);
+            $array_string = preg_replace('/\'([^\']+)\'\s*=>/', '"$1":', $array_string);
+            $array_string = preg_replace('/=>/', ':', $array_string);
+            $array_string = preg_replace('/,\s*\]/', ']', $array_string);
+            
+            // Try to decode as JSON
+            $decoded = json_decode($array_string, true);
+            if ($decoded !== null) {
+                return $decoded;
+            }
+        }
+        
+        return null;
     }
 }

@@ -4,10 +4,11 @@ import * as path from 'path';
 import { ApiConnector } from '../core/ApiConnector';
 import { ConfigManager } from '../core/ConfigManager';
 import { Snippet, SnippetCreateData, SnippetUpdateData } from '../types/Snippet';
+import { SnippetPluginProvider } from './SnippetPluginProvider';
 
-export class SnippetProvider implements vscode.Disposable {
-    private _onDidChangeSnippets = new vscode.EventEmitter<void>();
-    public readonly onDidChangeSnippets = this._onDidChangeSnippets.event;
+export class SnippetProvider implements vscode.Disposable, SnippetPluginProvider {
+    private _onDidChangeSnippets: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
+    public readonly onDidChangeSnippets: vscode.Event<void> = this._onDidChangeSnippets.event;
 
     private apiConnector: ApiConnector | null = null;
     private configManager: ConfigManager;
@@ -46,7 +47,7 @@ export class SnippetProvider implements vscode.Disposable {
         }
     }
 
-    public getSnippetCachePath(id: number): string {
+    public getSnippetCachePath(id: string | number): string {
         return path.join(this.cachePath, `snippet-${id}.php`);
     }
 
@@ -100,13 +101,18 @@ export class SnippetProvider implements vscode.Disposable {
         }
     }
 
-    public async getSnippet(id: number): Promise<Snippet | null> {
+    public async getSnippet(id: string | number): Promise<Snippet | null> {
         if (!this.apiConnector) {
             throw new Error('Le fournisseur n\'est pas initialisé');
         }
 
+        // Skip FluentSnippets (with FS prefix) as they are not handled by CodeSnippets API
+        if (typeof id === 'string' && id.startsWith('FS')) {
+            return null;
+        }
+
         try {
-            const snippet = await this.apiConnector.getSnippet(id);
+            const snippet = await this.apiConnector.getSnippet(id as number);
             if (snippet) {
                 const filePath = this.getSnippetCachePath(snippet.id);
                 const content = `<?php
@@ -147,8 +153,13 @@ ${snippet.code}`;
             throw new Error('Le fournisseur n\'est pas initialisé');
         }
 
+        // Skip FluentSnippets (with FS prefix) as they are not handled by CodeSnippets API
+        if (typeof data.id === 'string' && data.id.startsWith('FS')) {
+            return false;
+        }
+
         try {
-            await this.apiConnector.updateSnippet(data.id, data);
+            await this.apiConnector.updateSnippet(data.id as number, data);
             this._onDidChangeSnippets.fire();
             return true;
         } catch (error: any) {
@@ -157,13 +168,18 @@ ${snippet.code}`;
         }
     }
 
-    public async deleteSnippet(id: number): Promise<boolean> {
+    public async deleteSnippet(id: string | number): Promise<boolean> {
         if (!this.apiConnector) {
             throw new Error('Le fournisseur n\'est pas initialisé');
         }
 
+        // Skip FluentSnippets (with FS prefix) as they are not handled by CodeSnippets API
+        if (typeof id === 'string' && id.startsWith('FS')) {
+            return false;
+        }
+
         try {
-            await this.apiConnector.deleteSnippet(id);
+            await this.apiConnector.deleteSnippet(id as number);
             const filePath = this.getSnippetCachePath(id);
             try {
                 await fs.unlink(filePath);
@@ -180,10 +196,7 @@ ${snippet.code}`;
         }
     }
 
-    public async reconfigure(): Promise<boolean> {
-        await this.configManager.clearConfig();
-        return await this.initialize();
-    }
+
 
     public async updateSnippetFromFile(filePath: string): Promise<void> {
         if (!this.isSnippetFile(filePath)) {
@@ -276,7 +289,7 @@ ${snippet.code}`;
         }
     }
 
-    public async getBackups(snippetId: number): Promise<string[]> {
+    public async getBackups(snippetId: string | number): Promise<string[]> {
         const backupDir = path.join(this.backupPath, `snippet-${snippetId}`);
         try {
             const files = await fs.readdir(backupDir);
@@ -291,7 +304,7 @@ ${snippet.code}`;
         }
     }
 
-    public async restoreBackup(snippetId: number, backupFile: string): Promise<boolean> {
+    public async restoreBackup(snippetId: string | number, backupFile: string): Promise<boolean> {
         const backupPath = path.join(this.backupPath, `snippet-${snippetId}`, backupFile);
         try {
             const backupContent = await fs.readFile(backupPath, 'utf-8');

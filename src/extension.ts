@@ -1,16 +1,31 @@
 import * as vscode from 'vscode';
-import { SnippetProvider } from './providers/SnippetProvider';
 import { SnippetController } from './controllers/SnippetController';
 import { SnippetTreeDataProvider } from './providers/SnippetTreeDataProvider';
+import { createSnippetProvider } from './providers/SnippetProviderFactory';
+import { ConfigManager } from './core/ConfigManager';
 
 export async function activate(context: vscode.ExtensionContext) {
-    const provider = new SnippetProvider(context);
+    const configManager = new ConfigManager(context);
+    let config = await configManager.getConfig();
+
+    if (!config) {
+        config = await configManager.promptForConfig();
+        if (!config) {
+            return; // User cancelled the configuration
+        }
+    }
+
+    let provider = await createSnippetProvider(context, config);
+    if (!provider) {
+        return; // Could not create a provider
+    }
+
     await provider.initialize();
 
     const snippetTreeDataProvider = new SnippetTreeDataProvider(provider);
     vscode.window.registerTreeDataProvider('wordpress-snippets-view', snippetTreeDataProvider);
 
-    const controller = new SnippetController(provider);
+    const controller = new SnippetController(provider, context);
 
     context.subscriptions.push(
         vscode.commands.registerCommand('wordpressSnippets.refresh', () => snippetTreeDataProvider.refresh()),
@@ -26,7 +41,7 @@ export async function activate(context: vscode.ExtensionContext) {
             await controller.reconfigure();
             snippetTreeDataProvider.refresh();
         }),
-        vscode.commands.registerCommand('wordpressSnippets.openSnippet', (item) => controller.openSnippet(item.snippet.id)),
+        vscode.commands.registerCommand('wordpressSnippets.openSnippet', (item) => controller.openSnippet(item)),
         vscode.commands.registerCommand('wordpressSnippets.toggleSnippet', async (item) => {
             await controller.toggleSnippet(item);
             snippetTreeDataProvider.refresh();
@@ -69,12 +84,24 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.window.showInformationMessage(clearMessage);
         }),
         vscode.commands.registerCommand('wordpressSnippets.analyzeSnippet', () => controller.analyzeSnippet()),
-        vscode.commands.registerCommand('wordpressSnippets.restoreBackup', (item) => controller.restoreBackup(item))
+        vscode.commands.registerCommand('wordpressSnippets.restoreBackup', (item) => controller.restoreBackup(item)),
+        vscode.commands.registerCommand('wordpress-snippets.switchPlugin', async () => {
+            const newConfig = await configManager.switchPlugin();
+            if (newConfig) {
+                const newProvider = await createSnippetProvider(context, newConfig);
+                if (newProvider) {
+                    await newProvider.initialize();
+                    provider = newProvider;
+                    snippetTreeDataProvider.updateProvider(provider);
+                    snippetTreeDataProvider.refresh();
+                }
+            }
+        })
     );
 
     context.subscriptions.push(
         vscode.workspace.onDidSaveTextDocument(async (document: vscode.TextDocument) => {
-            if (provider.isSnippetFile(document.uri.fsPath)) {
+            if (provider && provider.isSnippetFile(document.uri.fsPath)) {
                 await provider.updateSnippetFromFile(document.uri.fsPath);
             }
         })

@@ -1,9 +1,14 @@
 import * as vscode from 'vscode';
-import { SnippetProvider } from '../providers/SnippetProvider';
+import { ConfigManager } from '../core/ConfigManager';
+import { SnippetPluginProvider } from '../providers/SnippetPluginProvider';
 import { Snippet } from '../types/Snippet';
 
 export class SnippetController {
-    constructor(private snippetProvider: SnippetProvider) {}
+    private configManager: ConfigManager;
+
+    constructor(private snippetProvider: SnippetPluginProvider, context: vscode.ExtensionContext) {
+        this.configManager = new ConfigManager(context);
+    }
 
     public async listSnippets() {
         // Cette méthode n'est plus nécessaire car la liste est affichée dans la vue arborescente
@@ -41,19 +46,48 @@ export class SnippetController {
     }
 
     public async reconfigure() {
-        await this.snippetProvider.reconfigure();
+        const newConfig = await this.configManager.switchPlugin();
+        if (newConfig) {
+            // The provider will be updated with the new config, so we just need to refresh the tree.
+            vscode.commands.executeCommand('wordpress-snippets.refreshSnippets');
+        } else {
+            vscode.window.showInformationMessage('Switch plugin cancelled.');
+        }
     }
 
-    public async openSnippet(id: number) {
-        const snippet = await this.snippetProvider.getSnippet(id);
+    public async openSnippet(snippet: Snippet) {
         if (!snippet) {
-            vscode.window.showErrorMessage(`Snippet with ID ${id} not found.`);
             return;
         }
+        const { id } = snippet;
 
         const filePath = this.snippetProvider.getSnippetCachePath(id);
-        const doc = await vscode.workspace.openTextDocument(filePath);
-        await vscode.window.showTextDocument(doc, { preview: false });
+        console.log(`Attempting to open snippet ${id} at path: ${filePath}`);
+        
+        try {
+            // First check if file exists
+            const fs = require('fs').promises;
+            await fs.access(filePath);
+            
+            const doc = await vscode.workspace.openTextDocument(filePath);
+            await vscode.window.showTextDocument(doc, { preview: false });
+        } catch (error: any) {
+            console.error(`Error opening snippet ${id}:`, error);
+            
+            // Try to fetch the snippet and cache it
+            try {
+                const fetchedSnippet = await this.snippetProvider.getSnippet(id);
+                if (fetchedSnippet) {
+                    // Try opening again after caching
+                    const doc = await vscode.workspace.openTextDocument(filePath);
+                    await vscode.window.showTextDocument(doc, { preview: false });
+                } else {
+                    vscode.window.showErrorMessage(`Snippet ${id} not found on server.`);
+                }
+            } catch (fetchError: any) {
+                vscode.window.showErrorMessage(`Could not open file for snippet ${id}. Error: ${error.message}`);
+            }
+        }
     }
 
     public async toggleSnippet(snippet: Snippet) {
@@ -66,17 +100,15 @@ export class SnippetController {
     }
 
     public async restoreBackup(item?: any) {
-        let snippetId: number;
+        let snippetId: string | number;
         if (item && item.snippet) {
             snippetId = item.snippet.id;
         } else {
             const idStr = await vscode.window.showInputBox({ prompt: 'Enter the Snippet ID to restore' });
             if (!idStr) return;
-            snippetId = parseInt(idStr, 10);
-            if (isNaN(snippetId)) {
-                vscode.window.showErrorMessage('Invalid ID.');
-                return;
-            }
+            // Try to parse as number first, if it fails, use as string
+            const numericId = parseInt(idStr, 10);
+            snippetId = isNaN(numericId) ? idStr : numericId;
         }
 
         const backups = await this.snippetProvider.getBackups(snippetId);
@@ -94,7 +126,10 @@ export class SnippetController {
             if (success) {
                 vscode.window.showInformationMessage(`Snippet ${snippetId} restored from ${selectedBackup}.`);
                 // Refresh the snippet view and file content
-                await this.openSnippet(snippetId);
+                const snippet = await this.snippetProvider.getSnippet(snippetId);
+                if (snippet) {
+                    await this.openSnippet(snippet);
+                }
             } else {
                 vscode.window.showErrorMessage('Failed to restore backup.');
             }
@@ -102,16 +137,20 @@ export class SnippetController {
     }
 
 
-    public async analyzeSnippet(id?: number) {
+    public async analyzeSnippet(id?: string | number) {
         let snippetId = id;
 
         if (!snippetId) {
             const editor = vscode.window.activeTextEditor;
             if (editor) {
                 const text = editor.document.getText();
-                const match = text.match(/\*\s*Snippet ID:\s*(\d+)/);
-                if (match && match[1]) {
-                    snippetId = parseInt(match[1], 10);
+                // Look for both numeric IDs and FS prefixed IDs
+                const numericMatch = text.match(/\*\s*Snippet ID:\s*(\d+)/);
+                const fsMatch = text.match(/\*\s*Snippet ID:\s*(FS\d+)/);
+                if (fsMatch && fsMatch[1]) {
+                    snippetId = fsMatch[1];
+                } else if (numericMatch && numericMatch[1]) {
+                    snippetId = parseInt(numericMatch[1], 10);
                 }
             }
         }
@@ -119,13 +158,15 @@ export class SnippetController {
         if (!snippetId) {
             const idStr = await vscode.window.showInputBox({ prompt: 'Enter the ID of the snippet to analyze' });
             if (idStr) {
-                snippetId = parseInt(idStr, 10);
+                // Try to parse as number first, if it fails, use as string
+                const numericId = parseInt(idStr, 10);
+                snippetId = isNaN(numericId) ? idStr : numericId;
             } else {
                 return;
             }
         }
 
-        if (snippetId && !isNaN(snippetId)) {
+        if (snippetId) {
             const snippet = await this.snippetProvider.getSnippet(snippetId);
             if (snippet) {
                 const analysis = `ID: ${snippet.id}\nName: ${snippet.name}\nDescription: ${snippet.description}\nActive: ${snippet.active}\n\nCode:\n---\n${snippet.code}`;
@@ -133,8 +174,6 @@ export class SnippetController {
             } else {
                 vscode.window.showErrorMessage(`Snippet with ID ${snippetId} not found.`);
             }
-        } else if (snippetId) {
-            vscode.window.showErrorMessage('Invalid ID entered.');
         }
     }
 }

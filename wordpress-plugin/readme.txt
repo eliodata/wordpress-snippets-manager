@@ -4,7 +4,7 @@ Donate link: https://eliodata.com/donate
 Tags: snippets, code, ide, api, development
 Requires at least: 5.0
 Tested up to: 6.8
-Stable tag: 1.2.0
+Stable tag: 1.3.0
 Requires PHP: 7.4
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
@@ -41,7 +41,7 @@ This plugin creates a secure REST API that allows compatible IDE extensions to:
 
 * **WordPress**: 5.0 or higher
 * **PHP**: 7.4 or higher
-* **Code Snippets Plugin**: Required for snippet management
+* **Snippet Management Plugin**: Either Code Snippets or FluentSnippets plugin
 * **Administrator Access**: Required for API authentication
 
 = 🔒 Security Features =
@@ -54,6 +54,7 @@ This plugin creates a secure REST API that allows compatible IDE extensions to:
 = 🤝 Compatibility =
 
 * **Code Snippets Plugin**: Full compatibility with all versions
+* **FluentSnippets Plugin**: Full compatibility with advanced snippet management features
 * **WordPress Multisite**: Supported
 * **Popular Themes**: Works with any WordPress theme
 * **Other Plugins**: No known conflicts
@@ -85,7 +86,12 @@ This plugin creates a secure REST API that allows compatible IDE extensions to:
 
 = Do I need the Code Snippets plugin? =
 
-Yes, this plugin works as a bridge with the popular Code Snippets plugin to manage your snippets. You need to install and activate the Code Snippets plugin first.
+You need either the Code Snippets plugin OR the FluentSnippets plugin to manage your snippets. This bridge plugin supports both:
+
+* **Code Snippets**: The most popular WordPress snippet plugin with over 1 million active installations
+* **FluentSnippets**: Advanced snippet management with enhanced organization features
+
+You only need one of these plugins installed and activated.
 
 = Is this plugin secure? =
 
@@ -116,6 +122,14 @@ Yes, the plugin is fully compatible with WordPress Multisite installations.
 5. Visual previews of code changes with AI assistance
 
 == Changelog ==
+
+= 1.3.0 =
+* Added full support for FluentSnippets plugin alongside Code Snippets
+* Enhanced API endpoints to handle multiple snippet management plugins
+* Improved snippet parsing for FluentSnippets with Internal Doc sections
+* Added intelligent ID handling for different snippet plugin formats
+* Enhanced search capabilities across multiple snippet providers
+* Updated compatibility documentation
 
 = 1.2.0 =
 * Updated extension documentation to reflect new plugin naming

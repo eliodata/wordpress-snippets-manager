@@ -1,5 +1,5 @@
 export interface Snippet {
-    id: number;
+    id: string | number;
     name: string;
     description: string;
     code: string;
@@ -19,11 +19,13 @@ export interface SnippetCreateData {
 }
 
 export interface SnippetUpdateData extends SnippetCreateData {
-    id: number;
+    id: string | number;
 }
 
 export interface WordPressConnectionConfig {
     siteUrl: string;
     username: string;
     applicationPassword: string;
+    plugin: 'Code Snippets' | 'FluentSnippets';
+    fluentSnippetsPath?: string;
 }

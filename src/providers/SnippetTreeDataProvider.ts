@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { SnippetProvider } from './SnippetProvider';
+import { SnippetPluginProvider } from './SnippetPluginProvider';
 import { Snippet } from '../types/Snippet';
 
 export class SnippetTreeDataProvider implements vscode.TreeDataProvider<Snippet> {
@@ -11,8 +11,14 @@ export class SnippetTreeDataProvider implements vscode.TreeDataProvider<Snippet>
     private sortOrder: 'asc' | 'desc' = 'asc';
     private lastResultCount: number = 0;
 
-    constructor(private snippetProvider: SnippetProvider) {
+    constructor(private snippetProvider: SnippetPluginProvider) {
         this.snippetProvider.onDidChangeSnippets(() => this.refresh());
+    }
+
+    updateProvider(provider: SnippetPluginProvider): void {
+        this.snippetProvider = provider;
+        this.snippetProvider.onDidChangeSnippets(() => this.refresh());
+        this.refresh();
     }
 
     refresh(): void {
@@ -32,13 +38,27 @@ export class SnippetTreeDataProvider implements vscode.TreeDataProvider<Snippet>
         if (this.searchTerm) {
             const normalizedTerm = this.normalizeString(this.searchTerm);
             
-            // Recherche par ID si le terme est numérique
-            if (/^\d+$/.test(this.searchTerm.trim())) {
-                const searchId = parseInt(this.searchTerm.trim(), 10);
-                const searchIdStr = this.searchTerm.trim();
+            // Recherche par ID - support des IDs numériques et des IDs avec préfixe FS
+            const trimmedTerm = this.searchTerm.trim();
+            if (/^\d+$/.test(trimmedTerm) || /^FS\d+$/i.test(trimmedTerm)) {
                 snippets = snippets.filter(s => {
-                    // Comparer à la fois en tant que nombre et chaîne
-                    return s.id === searchId || s.id.toString() === searchIdStr;
+                    const snippetIdStr = s.id.toString();
+                    
+                    // Si l'utilisateur cherche un ID numérique pur
+                    if (/^\d+$/.test(trimmedTerm)) {
+                        const searchId = parseInt(trimmedTerm, 10);
+                        // Comparer avec l'ID numérique ou avec l'ID FS correspondant
+                        return s.id === searchId || 
+                               snippetIdStr === trimmedTerm || 
+                               snippetIdStr === `FS${trimmedTerm}`;
+                    }
+                    
+                    // Si l'utilisateur cherche un ID avec préfixe FS
+                    if (/^FS\d+$/i.test(trimmedTerm)) {
+                        return snippetIdStr.toLowerCase() === trimmedTerm.toLowerCase();
+                    }
+                    
+                    return false;
                 });
             } else {
                 // Recherche textuelle avec normalisation des accents
@@ -106,8 +126,9 @@ export class SnippetTreeDataProvider implements vscode.TreeDataProvider<Snippet>
         if (this.searchTerm) {
             const count = this.lastResultCount;
             const term = this.searchTerm;
-            const isNumeric = /^\d+$/.test(term.trim());
-            if (isNumeric) {
+            const trimmedTerm = term.trim();
+            const isIdSearch = /^\d+$/.test(trimmedTerm) || /^FS\d+$/i.test(trimmedTerm);
+            if (isIdSearch) {
                 return count > 0 ? `Snippet ID ${term} trouvé` : `Aucun snippet avec l'ID ${term}`;
             } else {
                 return `${count} snippet${count !== 1 ? 's' : ''} trouvé${count !== 1 ? 's' : ''} pour "${term}"`;
@@ -163,7 +184,7 @@ class SnippetItem extends vscode.TreeItem {
         this.command = {
             command: 'wordpressSnippets.openSnippet',
             title: 'Open Snippet',
-            arguments: [this]
+            arguments: [this.snippet]
         };
         this.contextValue = 'snippet';
         this.iconPath = new vscode.ThemeIcon(snippet.active ? 'check' : 'circle-slash');

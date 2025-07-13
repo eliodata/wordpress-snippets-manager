@@ -56,4 +56,18 @@ export class ApiConnector {
         });
         return response.data;
     }
+
+    public async getStatus() {
+        const response = await axios.get(`${this.apiUrl}wp-json/ide/v1/status`, {
+            headers: this.getAuthHeaders()
+        });
+        return response.data;
+    }
+
+    public async getFluentSnippets() {
+        const response = await axios.get(`${this.apiUrl}wp-json/ide/v1/fluent-snippets`, {
+            headers: this.getAuthHeaders()
+        });
+        return response.data;
+    }
 }
