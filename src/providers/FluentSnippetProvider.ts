@@ -354,12 +354,58 @@ export class FluentSnippetProvider implements vscode.Disposable, SnippetPluginPr
 
 
     async updateSnippetFromFile(filePath: string): Promise<void> {
-        // With FluentSnippets, saving the file is the update. We just need to refresh the view.
+        // Check if this is a cache file that needs to be synced to FluentSnippets
+        if (filePath.includes('.snippet_cache') && filePath.endsWith('.php')) {
+            try {
+                // Extract snippet ID from cache file path
+                const fileName = path.basename(filePath);
+                const idMatch = fileName.match(/snippet-(.+)\.php$/);
+                if (!idMatch) {
+                    this._onDidChangeSnippets.fire();
+                    return;
+                }
+                
+                const snippetId = idMatch[1];
+                
+                // Read the modified cache file
+                const cacheContent = await fs.readFile(filePath, 'utf8');
+                const snippet = this.parseSnippetFromCache(cacheContent, snippetId);
+                
+                if (snippet && this.apiConnector) {
+                    // Find the real FluentSnippets storage path
+                    const response = await this.apiConnector.getFluentSnippets();
+                    if (response && response.snippets) {
+                        // Find the corresponding snippet in FluentSnippets
+                        const numericId = typeof snippetId === 'string' && snippetId.startsWith('FS') 
+                            ? snippetId.substring(2) 
+                            : snippetId;
+                        
+                        const fluentSnippet = response.snippets.find((s: any) => s.id.toString() === numericId.toString());
+                        if (fluentSnippet) {
+                            // Update the real FluentSnippets file
+                            await this.syncCacheToFluentSnippets(snippet, numericId);
+                            vscode.window.showInformationMessage(`Snippet ${snippet.name} synchronized to FluentSnippets!`);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error syncing cache to FluentSnippets:', error);
+                vscode.window.showErrorMessage('Failed to sync changes to FluentSnippets: ' + error);
+            }
+        }
+        
+        // Refresh the view
         this._onDidChangeSnippets.fire();
     }
 
     isSnippetFile(filePath: string): boolean {
-        return this.snippetsPath ? filePath.startsWith(this.snippetsPath) : false;
+        // Check if it's a real FluentSnippets file
+        if (this.snippetsPath && filePath.startsWith(this.snippetsPath)) {
+            return true;
+        }
+        
+        // Check if it's a cache file that needs to be synced
+        return filePath.includes('.snippet_cache') && filePath.endsWith('.php');
     }
 
     getSnippetCachePath(id: string | number): string {
@@ -401,5 +447,78 @@ ${snippet.code}`;
     async restoreBackup(snippetId: string | number, backupFile: string): Promise<boolean> {
         vscode.window.showInformationMessage('Backup and restore is not supported for FluentSnippets in this extension.');
         return false;
+    }
+
+    /**
+     * Synchronize cache changes to the real FluentSnippets file
+     */
+    private async syncCacheToFluentSnippets(snippet: Snippet, numericId: string | number): Promise<void> {
+        if (!this.apiConnector) {
+            throw new Error('API connector not available');
+        }
+
+        try {
+            // Get the FluentSnippets storage path from WordPress
+            const response = await this.apiConnector.getFluentSnippets();
+            if (!response || !response.snippets) {
+                throw new Error('Could not retrieve FluentSnippets data');
+            }
+
+            // Find the snippet file name pattern
+            const fluentSnippet = response.snippets.find((s: any) => s.id.toString() === numericId.toString());
+            if (!fluentSnippet) {
+                throw new Error(`FluentSnippet with ID ${numericId} not found`);
+            }
+
+            // Create the updated content in FluentSnippets format
+            const fluentContent = `<?php\n${snippet.code}`;
+
+            // Use WordPress API to update the file
+            // Since we don't have direct file system access, we'll need to create an API endpoint
+            // For now, we'll use a workaround by calling a custom endpoint
+            const updateData = {
+                id: numericId,
+                content: fluentContent,
+                name: snippet.name
+            };
+
+            // Make API call to update FluentSnippets file
+            await this.updateFluentSnippetFile(updateData);
+            
+        } catch (error) {
+            console.error('Error syncing to FluentSnippets:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Update FluentSnippets file via API
+     */
+    private async updateFluentSnippetFile(data: { id: string | number, content: string, name: string }): Promise<void> {
+        if (!this.apiConnector) {
+            throw new Error('API connector not available');
+        }
+
+        try {
+            // Use the new API endpoint to update FluentSnippets file
+            const response = await this.apiConnector.updateFluentSnippet(data.id, {
+                content: data.content
+            });
+            
+            if (response && response.success) {
+                console.log(`FluentSnippet ${data.id} updated successfully:`, response.message);
+            } else {
+                throw new Error('Failed to update FluentSnippets file');
+            }
+        } catch (error) {
+            console.error('Error updating FluentSnippets file:', error);
+            // Fallback to manual sync message
+            vscode.window.showWarningMessage(
+                `Failed to automatically sync FluentSnippets file. ` +
+                `Error: ${error}. ` +
+                `Please manually copy the changes from the cache file to your FluentSnippets file.`
+            );
+            throw error;
+        }
     }
 }

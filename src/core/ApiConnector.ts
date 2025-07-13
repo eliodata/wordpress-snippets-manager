@@ -70,4 +70,11 @@ export class ApiConnector {
         });
         return response.data;
     }
+
+    public async updateFluentSnippet(id: string | number, data: { content: string }) {
+        const response = await axios.put(`${this.apiUrl}wp-json/ide/v1/fluent-snippets/${id}`, data, {
+            headers: this.getAuthHeaders()
+        });
+        return response.data;
+    }
 }

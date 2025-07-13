@@ -108,6 +108,24 @@ class IDE_Snippets_API {
                 ],
             ]
         );
+
+        register_rest_route($this->namespace, '/fluent-snippets/(?P<id>\d+)',
+            [
+                [
+                    'methods' => WP_REST_Server::EDITABLE,
+                    'callback' => [$this, 'update_fluent_snippet'],
+                    'permission_callback' => [$this, 'check_permission'],
+                    'args' => [
+                        'id' => [
+                            'required' => true,
+                            'validate_callback' => function($param, $request, $key) {
+                                return is_numeric($param);
+                            }
+                        ],
+                    ],
+                ],
+            ]
+        );
     }
 
     /**
@@ -320,6 +338,75 @@ class IDE_Snippets_API {
         }
         
         return new WP_REST_Response(['snippets' => $snippets], 200);
+    }
+
+    /**
+     * Update FluentSnippets file
+     *
+     * @since 1.3.0
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response
+     */
+    public function update_fluent_snippet(WP_REST_Request $request) {
+        $id = $request['id'];
+        $params = $request->get_json_params();
+        
+        // Find FluentSnippets storage path
+        $possible_paths = [
+            WP_CONTENT_DIR . '/fluent-snippet-storage',
+            WP_CONTENT_DIR . '/fluent-snippets-storage',
+            wp_upload_dir()['basedir'] . '/fluent-snippet-storage',
+            wp_upload_dir()['basedir'] . '/fluent-snippets-storage'
+        ];
+        
+        $fluent_snippets_path = null;
+        foreach ($possible_paths as $path) {
+            if (is_dir($path)) {
+                $fluent_snippets_path = $path;
+                break;
+            }
+        }
+        
+        if (!$fluent_snippets_path) {
+            return new WP_Error('not_found', 'FluentSnippets storage directory not found', ['status' => 404]);
+        }
+        
+        // Find the existing file for this ID
+        $files = glob($fluent_snippets_path . '/' . $id . '-*.php');
+        
+        if (empty($files)) {
+            return new WP_Error('not_found', 'FluentSnippet file not found', ['status' => 404]);
+        }
+        
+        $file_path = $files[0]; // Take the first match
+        
+        // Validate required parameters
+        if (!isset($params['content'])) {
+            return new WP_Error('missing_content', 'Content parameter is required', ['status' => 400]);
+        }
+        
+        // Sanitize and prepare content
+        $content = $params['content'];
+        
+        // Ensure content starts with <?php if it doesn't already
+        if (!str_starts_with(trim($content), '<?php')) {
+            $content = '<?php\n' . $content;
+        }
+        
+        // Write the updated content to the file
+        $result = file_put_contents($file_path, $content);
+        
+        if ($result === false) {
+            return new WP_Error('write_error', 'Failed to write to FluentSnippets file', ['status' => 500]);
+        }
+        
+        // Return success response
+        return new WP_REST_Response([
+            'success' => true,
+            'message' => 'FluentSnippet updated successfully',
+            'file_path' => basename($file_path),
+            'bytes_written' => $result
+        ], 200);
     }
     
     /**
