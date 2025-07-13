@@ -103,9 +103,19 @@ export class SnippetController {
         if (!snippet) {
             return;
         }
-        const { id, name, description, code, active } = snippet;
-        const updatedSnippet = { id, name, description, code, active: !active };
-        await this.snippetProvider.updateSnippet(updatedSnippet);
+        
+        // Check if this is a FluentSnippet and if the provider has a toggleSnippet method
+        if (typeof snippet.id === 'string' && snippet.id.startsWith('FS') && 
+            'toggleSnippet' in this.snippetProvider && 
+            typeof this.snippetProvider.toggleSnippet === 'function') {
+            // Use the specific toggleSnippet method for FluentSnippets
+            await (this.snippetProvider as any).toggleSnippet(snippet.id);
+        } else {
+            // Use the standard updateSnippet method for Code Snippets
+            const { id, name, description, code, active } = snippet;
+            const updatedSnippet = { id, name, description, code, active: !active };
+            await this.snippetProvider.updateSnippet(updatedSnippet);
+        }
     }
 
     public async restoreBackup(item?: any) {

@@ -196,12 +196,15 @@ export class FluentSnippetProvider implements vscode.Disposable, SnippetPluginPr
             const nameFromDoc = this.extractNameFromInternalDoc(content);
             const displayName = nameFromDoc || metadata.name || 'Unnamed Snippet';
             
+            // FluentSnippets uses different status values: 'published' = active, 'draft' = inactive
+            const isActive = metadata.status === 'published' || metadata.status === 'active' || metadata.status === '1' || metadata.status === 1;
+            
             return {
                 id: id,
                 name: displayName,
                 description: metadata.description || '',
                 code: content,
-                active: metadata.status === 'published',
+                active: isActive,
                 scope: metadata.run_at || 'backend',
                 created: metadata.created_at || '',
                 modified: metadata.updated_at || '',
@@ -447,6 +450,50 @@ ${snippet.code}`;
     async restoreBackup(snippetId: string | number, backupFile: string): Promise<boolean> {
         vscode.window.showInformationMessage('Backup and restore is not supported for FluentSnippets in this extension.');
         return false;
+    }
+
+    async toggleSnippet(id: string | number): Promise<boolean> {
+        if (!this.apiConnector) {
+            vscode.window.showErrorMessage('API connector not available.');
+            return false;
+        }
+
+        try {
+            // Get current snippet to determine new status
+            const snippet = await this.getSnippet(id);
+            if (!snippet) {
+                vscode.window.showErrorMessage(`Snippet with ID ${id} not found.`);
+                return false;
+            }
+
+            // Extract numeric ID from FS prefixed ID
+            const numericId = typeof id === 'string' && id.startsWith('FS') 
+                ? id.substring(2) 
+                : id;
+
+            // Toggle the status
+            const newStatus = !snippet.active;
+            const response = await this.apiConnector.toggleFluentSnippet(numericId, newStatus);
+            
+            if (response && response.success) {
+                // Update cache file with new status
+                snippet.active = newStatus;
+                await this.createCacheFile(snippet);
+                
+                this._onDidChangeSnippets.fire();
+                vscode.window.showInformationMessage(
+                    `Snippet "${snippet.name}" is now ${newStatus ? 'active' : 'inactive'}.`
+                );
+                return true;
+            } else {
+                vscode.window.showErrorMessage('Failed to toggle snippet status.');
+                return false;
+            }
+        } catch (error) {
+            console.error('Error toggling FluentSnippet:', error);
+            vscode.window.showErrorMessage('Error toggling snippet: ' + error);
+            return false;
+        }
     }
 
     /**

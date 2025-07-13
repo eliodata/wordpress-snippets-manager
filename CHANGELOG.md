@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.2.0] - 2024-12-XX
+## [2.2.0] - 2024-12-19
 
 ### Added
 - **🌐 Multi-Site Management**: Complete support for managing multiple WordPress sites from a single interface
@@ -29,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **TypeScript Compilation**: Resolved type issues with new connection configuration structure
+- **FluentSnippets Toggle**: Fixed active/inactive status inconsistency and toggle functionality
+- **FluentSnippets Status Detection**: Improved status parsing to handle various status values ('published', 'active', '1', etc.)
+- **FluentSnippets API Integration**: Added dedicated toggle endpoint for proper status management
 
 ## [2.1.0] - 2024-07-13
 
