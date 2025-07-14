@@ -68,13 +68,36 @@ export class FluentSnippetProvider implements vscode.Disposable, SnippetPluginPr
             
             if (response && response.snippets) {
                 for (const snippetData of response.snippets) {
-                    const snippet = this.parseFluentSnippetFromApi(snippetData);
-                    if (snippet) {
-                        const isActive = snippet.active;
+                    const apiSnippet = this.parseFluentSnippetFromApi(snippetData);
+                    if (apiSnippet) {
+                        // Check if we have a cached version first (it might have more recent status)
+                        const cacheFilePath = this.getSnippetCachePath(apiSnippet.id);
+                        let finalSnippet = apiSnippet;
+                        
+                        try {
+                            const cacheContent = await fs.readFile(cacheFilePath, 'utf8');
+                            const cachedSnippet = this.parseSnippetFromCache(cacheContent, apiSnippet.id);
+                            if (cachedSnippet) {
+                                // Use cached snippet but ALWAYS prioritize API status from Internal Doc
+                                finalSnippet = {
+                                    ...apiSnippet,
+                                    active: apiSnippet.active, // ALWAYS use API status from Internal Doc
+                                    code: cachedSnippet.code || apiSnippet.code // Use cached code if available
+                                };
+                                console.log(`Using API status for snippet ${apiSnippet.id}: active = ${apiSnippet.active} (from Internal Doc)`);
+                                
+                                // Update cache with fresh API status
+                                await this.createCacheFile(finalSnippet);
+                            }
+                        } catch (cacheError) {
+                            // No cache file exists, create one with API data
+                            await this.createCacheFile(apiSnippet);
+                            console.log(`Created new cache for snippet ${apiSnippet.id}: active = ${apiSnippet.active}`);
+                        }
+                        
+                        const isActive = finalSnippet.active;
                         if (status === 'all' || (status === 'active' && isActive) || (status === 'inactive' && !isActive)) {
-                            snippets.push(snippet);
-                            // Create cache file for each snippet
-                            await this.createCacheFile(snippet);
+                            snippets.push(finalSnippet);
                         }
                     }
                 }
@@ -120,12 +143,16 @@ export class FluentSnippetProvider implements vscode.Disposable, SnippetPluginPr
             const nameFromDoc = this.extractNameFromInternalDoc(snippetData.code || '');
             const displayName = nameFromDoc || snippetData.name || 'Unnamed Snippet';
             
+            // IMPORTANT: Read the real status from Internal Doc @status: published/draft
+            // This is the authoritative source for FluentSnippets status
+            const isActive = this.extractStatusFromInternalDoc(snippetData.code || '');
+            
             return {
                 id: id,
                 name: displayName,
                 description: snippetData.description || '',
                 code: snippetData.code || '',
-                active: snippetData.active === true || snippetData.status === 'published',
+                active: isActive,
                 scope: snippetData.scope || snippetData.run_at || 'backend',
                 created: snippetData.created || snippetData.created_at || '',
                 modified: snippetData.modified || snippetData.updated_at || '',
@@ -148,12 +175,19 @@ export class FluentSnippetProvider implements vscode.Disposable, SnippetPluginPr
             console.log(`API response for toggle Fluent snippet ${id}:`, response);
 
             if (response && response.success) {
-                // Mettre à jour le cache local
-                const snippet = await this.getSnippet(id);
-                if (snippet) {
-                    await this.createCacheFile({ ...snippet, active: active });
+                // Supprimer le cache pour forcer la régénération avec les nouvelles données de l'API
+                const cacheFilePath = this.getSnippetCachePath(id);
+                try {
+                    await fs.unlink(cacheFilePath);
+                    console.log(`Cache file deleted for snippet ${id} to force refresh`);
+                } catch (error) {
+                    // Cache file might not exist, that's ok
                 }
-                this._onDidChangeSnippets.fire();
+                
+                // Attendre un peu pour que l'API WordPress mette à jour le fichier
+                setTimeout(() => {
+                    this._onDidChangeSnippets.fire();
+                }, 500);
                 return true;
             } else {
                 vscode.window.showErrorMessage(response.message || 'Failed to toggle FluentSnippet.');
@@ -180,13 +214,33 @@ export class FluentSnippetProvider implements vscode.Disposable, SnippetPluginPr
         }
     }
 
+    private extractStatusFromInternalDoc(content: string): boolean {
+        try {
+            // Look for the @status: field in the Internal Doc section, accounting for optional asterisk
+            const statusMatch = content.match(/(?:\/\/|\*)?\s*@status:\s*([^\n\r]+)/);
+            if (statusMatch && statusMatch[1]) {
+                const status = statusMatch[1].trim().toLowerCase();
+                console.log(`DEBUG: Found @status: '${status}' in content`);
+                // FluentSnippets uses 'published' for active, 'draft' for inactive
+                const isActive = status === 'published';
+                console.log(`DEBUG: Status '${status}' -> active: ${isActive}`);
+                return isActive;
+            }
+            console.log('DEBUG: No @status found in Internal Doc, defaulting to false');
+            // If no @status found in Internal Doc, fallback to false (draft)
+            return false;
+        } catch (error) {
+            console.error('Error extracting status from Internal Doc:', error);
+            return false;
+        }
+    }
+
     private parseSnippetFromCache(content: string, id: string | number): Snippet | null {
         try {
             // Extract metadata from cache file header
             const idMatch = content.match(/\* Snippet ID: (.+)/);
             const nameMatch = content.match(/\* Name: (.+)/);
             const descriptionMatch = content.match(/\* Description: (.+)/);
-            const activeMatch = content.match(/@active (true|false)/);
             
             // Extract the actual code (everything after the header)
             const codeStartIndex = content.indexOf('*/\n\n');
@@ -196,12 +250,17 @@ export class FluentSnippetProvider implements vscode.Disposable, SnippetPluginPr
             const nameFromDoc = this.extractNameFromInternalDoc(content);
             const displayName = nameFromDoc || (nameMatch ? nameMatch[1].trim() : 'Unnamed Snippet');
             
+            // IMPORTANT: Read the real status from Internal Doc @status: published/draft
+            // This is the authoritative source for FluentSnippets status
+            const isActive = this.extractStatusFromInternalDoc(content);
+            console.log(`Parsing snippet ${id} from cache: active = ${isActive} (from Internal Doc @status)`);
+            
             return {
                 id: id,
                 name: displayName,
                 description: descriptionMatch ? descriptionMatch[1].trim() : '',
                 code: code,
-                active: activeMatch ? activeMatch[1] === 'true' : false,
+                active: isActive,
                 scope: 'backend',
                 created: '',
                 modified: '',
@@ -280,14 +339,18 @@ export class FluentSnippetProvider implements vscode.Disposable, SnippetPluginPr
         const cacheFilePath = this.getSnippetCachePath(id);
         try {
             const content = await fs.readFile(cacheFilePath, 'utf8');
-            return this.parseSnippetFromCache(content, id);
+            const cachedSnippet = this.parseSnippetFromCache(content, id);
+            console.log(`Retrieved snippet ${id} from cache: active = ${cachedSnippet?.active}`);
+            return cachedSnippet;
         } catch (error) {
             // Cache file doesn't exist, search in all snippets
+            console.log(`Cache miss for snippet ${id}, searching in all snippets`);
             const snippets = await this.getSnippets();
             const snippet = snippets.find(snippet => snippet.id === id) || null;
             
             if (snippet) {
                 await this.createCacheFile(snippet);
+                console.log(`Created cache for snippet ${id}: active = ${snippet.active}`);
             }
             
             return snippet;
@@ -455,17 +518,67 @@ export class FluentSnippetProvider implements vscode.Disposable, SnippetPluginPr
 
     private async createCacheFile(snippet: Snippet): Promise<void> {
         try {
+            await this._ensureCacheDir();
             const filePath = this.getSnippetCachePath(snippet.id);
+            
+            // Extract the Internal Doc section and the actual PHP code separately
+            let internalDoc = '';
+            let actualCode = '';
+            
+            const originalCode = snippet.code;
+            
+            // Look for Internal Doc section
+            const internalDocStart = originalCode.indexOf('// <Internal Doc Start>');
+            const internalDocEnd = originalCode.indexOf('// <Internal Doc End>');
+            
+            if (internalDocStart !== -1 && internalDocEnd !== -1) {
+                // Extract Internal Doc section
+                internalDoc = originalCode.substring(internalDocStart, internalDocEnd + '// <Internal Doc End>'.length);
+                
+                // Extract code after Internal Doc
+                const codeAfterDoc = originalCode.substring(internalDocEnd + '// <Internal Doc End>'.length);
+                actualCode = codeAfterDoc.replace(/^\s*\?>\s*/, '').trim();
+            } else {
+                // Fallback: extract code after first comment block
+                if (originalCode.includes('<?php') && originalCode.includes('*/')) {
+                    const headerEndIndex = originalCode.indexOf('*/');
+                    if (headerEndIndex !== -1) {
+                        actualCode = originalCode.substring(headerEndIndex + 2).trim();
+                        actualCode = actualCode.replace(/^<\?php\s*/g, '');
+                    }
+                } else {
+                    actualCode = originalCode;
+                }
+            }
+            
+            // Remove any remaining <?php tags from actual code
+            actualCode = actualCode.replace(/^<\?php\s*/g, '');
+            
+            // Extract the real status from Internal Doc to set @active correctly
+            const realStatus = this.extractStatusFromInternalDoc(originalCode);
+            
+            // Update the @status in Internal Doc to match the real status
+            let updatedInternalDoc = internalDoc;
+            if (internalDoc) {
+                const statusValue = realStatus ? 'published' : 'draft';
+                updatedInternalDoc = internalDoc.replace(
+                    /(?:\/\/|\*)?\s*@status:\s*[^\n\r]+/,
+                    `* @status: ${statusValue}`
+                );
+            }
+            
             const content = `<?php
 /**
  * Snippet ID: ${snippet.id}
  * Name: ${snippet.name}
  * Description: ${snippet.description}
- * @active ${snippet.active}
+ * @active ${realStatus ? 'true' : 'false'}
  */
 
-${snippet.code}`;
+${updatedInternalDoc}
+${actualCode}`;
             await fs.writeFile(filePath, content);
+            console.log(`Cache file updated for snippet ${snippet.id} - Internal Doc preserved, clean code extracted`);
         } catch (error) {
             console.error(`Failed to create cache file for snippet ${snippet.id}`, error);
         }

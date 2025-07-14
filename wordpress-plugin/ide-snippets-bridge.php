@@ -3,7 +3,7 @@
  * Plugin Name: IDE Code Snippets Bridge
  * Plugin URI: https://github.com/ide-snippets/wordpress-snippets-manager
  * Description: Bridge plugin that provides a secure REST API to connect your WordPress site with IDE extensions (like Trae AI, VS Code) for seamless code snippet management with AI-powered editing capabilities.
- * Version: 1.3.1
+ * Version: 1.5.1
  * Author: IDE Snippets by eliodata.com
  * Author URI: https://eliodata.com
  * License: GPL v3 or later
@@ -23,7 +23,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('IDE_SNIPPETS_BRIDGE_VERSION', '1.3.1');
+define('IDE_SNIPPETS_BRIDGE_VERSION', '1.5.1');
 define('IDE_SNIPPETS_BRIDGE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('IDE_SNIPPETS_BRIDGE_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('IDE_SNIPPETS_BRIDGE_PLUGIN_BASENAME', plugin_basename(__FILE__));

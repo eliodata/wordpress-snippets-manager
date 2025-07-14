@@ -366,12 +366,15 @@ class IDE_Snippets_API {
             $clean_code = preg_replace('/\?>\s*$/', '', $clean_code);
             $clean_code = trim($clean_code);
             
+            // Extract real status from Internal Doc @status field
+            $real_status = $this->extract_status_from_internal_doc($snippet_content);
+            
             $snippets[] = [
                 'id' => $id,
                 'name' => $name,
                 'description' => 'FluentSnippet: ' . $name,
                 'code' => $clean_code,
-                'active' => true, // Files in main directory are active
+                'active' => $real_status, // Read from Internal Doc @status
                 'scope' => 'backend',
                 'created' => date('Y-m-d H:i:s', filemtime($file_path)),
                 'modified' => date('Y-m-d H:i:s', filemtime($file_path)),
@@ -408,12 +411,15 @@ class IDE_Snippets_API {
             $clean_code = preg_replace('/\?>\s*$/', '', $clean_code);
             $clean_code = trim($clean_code);
             
+            // Extract real status from Internal Doc @status field
+            $real_status = $this->extract_status_from_internal_doc($snippet_content);
+            
             $snippets[] = [
                 'id' => $id,
                 'name' => $name,
                 'description' => 'FluentSnippet: ' . $name,
                 'code' => $clean_code,
-                'active' => false, // Files in disabled directory are inactive
+                'active' => $real_status, // Read from Internal Doc @status
                 'scope' => 'backend',
                 'created' => date('Y-m-d H:i:s', filemtime($file_path)),
                 'modified' => date('Y-m-d H:i:s', filemtime($file_path)),
@@ -494,6 +500,24 @@ class IDE_Snippets_API {
     }
     
     /**
+     * Extract status from Internal Doc @status field
+     *
+     * @since 1.5.0
+     * @param string $content
+     * @return bool
+     */
+    private function extract_status_from_internal_doc($content) {
+        // Look for the @status: field in the Internal Doc section, accounting for optional asterisk
+        if (preg_match('/(?:\/\/|\*)?\s*@status:\s*([^\n\r]+)/', $content, $matches)) {
+            $status = trim(strtolower($matches[1]));
+            // FluentSnippets uses 'published' for active, 'draft' for inactive
+            return $status === 'published';
+        }
+        // If no @status found in Internal Doc, fallback to false (draft)
+        return false;
+    }
+
+    /**
      * Parse FluentSnippets index.php file
      *
      * @since 1.2.0
@@ -536,16 +560,18 @@ class IDE_Snippets_API {
     private function regenerate_fluent_snippets_index($fluent_snippets_path) {
         $index_file = $fluent_snippets_path . '/index.php';
         
-        // Get all snippet files (active and disabled)
-        $active_files = glob($fluent_snippets_path . '/*.php');
-        $disabled_files = glob($fluent_snippets_path . '/disabled/*.php');
+        // Get all snippet files from both main directory and disabled directory
+        $all_files = array_merge(
+            glob($fluent_snippets_path . '/*.php'),
+            glob($fluent_snippets_path . '/disabled/*.php')
+        );
         
         $published_snippets = [];
         $draft_snippets = [];
         $backend_hooks = [];
         
-        // Process active files (published)
-        foreach ($active_files as $file_path) {
+        // Process all files and read their actual status from Internal Doc
+        foreach ($all_files as $file_path) {
             $filename = basename($file_path);
             
             // Skip the index.php file itself
@@ -558,12 +584,16 @@ class IDE_Snippets_API {
                 $snippet_id = $matches[1];
                 $snippet_name = str_replace('-', ' ', ucwords($matches[2]));
                 
+                // Read the actual status from the file's Internal Doc
+                $file_content = file_get_contents($file_path);
+                $status = $this->extract_status_from_file($file_content);
+                
                 // Create FluentSnippets compatible entry
-                $published_snippets[$filename] = [
+                $snippet_entry = [
                     'name' => $snippet_name,
                     'description' => '',
                     'type' => 'PHP',
-                    'status' => 'published',
+                    'status' => $status,
                     'tags' => '',
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
@@ -579,40 +609,13 @@ class IDE_Snippets_API {
                     'file_name' => $filename
                 ];
                 
-                // Add to backend hooks
-                $backend_hooks[] = $filename;
-            }
-        }
-        
-        // Process disabled files (draft)
-        foreach ($disabled_files as $file_path) {
-            $filename = basename($file_path);
-            
-            // Extract ID and name from filename (format: ID-name.php)
-            if (preg_match('/^(\d+)-(.+)\.php$/', $filename, $matches)) {
-                $snippet_id = $matches[1];
-                $snippet_name = str_replace('-', ' ', ucwords($matches[2]));
-                
-                // Create FluentSnippets compatible entry for draft
-                $draft_snippets[$filename] = [
-                    'name' => $snippet_name,
-                    'description' => '',
-                    'type' => 'PHP',
-                    'status' => 'draft',
-                    'tags' => '',
-                    'created_at' => date('Y-m-d H:i:s'),
-                    'updated_at' => date('Y-m-d H:i:s'),
-                    'run_at' => 'backend',
-                    'priority' => 10,
-                    'group' => 'IDE Snippets',
-                    'condition' => [
-                        'status' => 'no',
-                        'run_if' => 'assertive',
-                        'items' => [[]]
-                    ],
-                    'load_as_file' => '',
-                    'file_name' => $filename
-                ];
+                // Add to the appropriate array based on actual status
+                if ($status === 'published') {
+                    $published_snippets[$filename] = $snippet_entry;
+                    $backend_hooks[] = $filename;
+                } else {
+                    $draft_snippets[$filename] = $snippet_entry;
+                }
             }
         }
         
@@ -637,13 +640,32 @@ class IDE_Snippets_API {
             'error_files' => []
         ];
         
-        // Create the index.php content in FluentSnippets format
+        // Create the index.php content in FluentSnippets format with output buffering protection
         $index_content = "<?php\n";
         $index_content .= "if (!defined(\"ABSPATH\")) {return;}\n";
         $index_content .= "/*\n";
         $index_content .= " * This is an auto-generated file by Fluent Snippets plugin.\n";
         $index_content .= " * Please do not edit manually.\n";
+        $index_content .= " * Enhanced by IDE Snippets Bridge for header safety.\n";
         $index_content .= " */\n";
+        $index_content .= "\n";
+        $index_content .= "// IDE Snippets Bridge: Add output buffering protection for snippets with HTML\n";
+        $index_content .= "add_action('init', function() {\n";
+        $index_content .= "    if (!headers_sent()) {\n";
+        $index_content .= "        ob_start();\n";
+        $index_content .= "    }\n";
+        $index_content .= "}, 1);\n";
+        $index_content .= "\n";
+        $index_content .= "add_action('wp_footer', function() {\n";
+        $index_content .= "    if (ob_get_level()) {\n";
+        $index_content .= "        \$content = ob_get_clean();\n";
+        $index_content .= "        // Only output if it's not a complete HTML document\n";
+        $index_content .= "        if (!preg_match('/<!DOCTYPE|<html/i', \$content)) {\n";
+        $index_content .= "            echo \$content;\n";
+        $index_content .= "        }\n";
+        $index_content .= "    }\n";
+        $index_content .= "}, 999);\n";
+        $index_content .= "\n";
         $index_content .= "return " . var_export($fluent_data, true) . ";\n";
         
         // Write the index file
@@ -660,6 +682,7 @@ class IDE_Snippets_API {
      * @return WP_REST_Response
      */
     public function toggle_fluent_snippet(WP_REST_Request $request) {
+        global $wpdb;
         error_log('IDE Snippets Bridge: toggle_fluent_snippet called with ID: ' . $request['id']);
         $id = str_replace('FS', '', $request['id']);
         $params = $request->get_json_params();
@@ -686,55 +709,195 @@ class IDE_Snippets_API {
         }
         
         $active = isset($params['active']) ? (bool) $params['active'] : false;
-        $disabled_dir = $fluent_snippets_path . '/disabled';
-
-        // Find the snippet file in either the main or disabled directory
+        
+        // Find the snippet file. It should be in the main directory.
         $files = glob($fluent_snippets_path . '/' . $id . '-*.php');
-        $disabled_files = glob($disabled_dir . '/' . $id . '-*.php');
-
         $source_path = null;
+
         if (!empty($files)) {
             $source_path = $files[0];
-        } elseif (!empty($disabled_files)) {
-            $source_path = $disabled_files[0];
-        }
-
-        if (!$source_path) {
-            return new WP_Error('not_found', 'FluentSnippet file not found in any directory', ['status' => 404]);
-        }
-
-        $filename = basename($source_path);
-        $main_path = $fluent_snippets_path . '/' . $filename;
-        $disabled_path = $disabled_dir . '/' . $filename;
-
-        if ($active) {
-            // Activating: move from 'disabled' to main directory
-            if (file_exists($disabled_path)) {
-                if (!rename($disabled_path, $main_path)) {
-                    return new WP_Error('file_error', 'Failed to activate snippet by moving file.', ['status' => 500]);
-                }
-            }
         } else {
-            // Deactivating: move from main to 'disabled' directory
-            if (!is_dir($disabled_dir)) {
-                wp_mkdir_p($disabled_dir);
-            }
-            if (file_exists($main_path)) {
-                if (!rename($main_path, $disabled_path)) {
-                    return new WP_Error('file_error', 'Failed to deactivate snippet by moving file.', ['status' => 500]);
+            // As a fallback for snippets disabled with older versions of the bridge, check the disabled directory.
+            $disabled_dir = $fluent_snippets_path . '/disabled';
+            $disabled_files = glob($disabled_dir . '/' . $id . '-*.php');
+            if (!empty($disabled_files)) {
+                $old_path = $disabled_files[0];
+                $filename = basename($old_path);
+                $new_path = $fluent_snippets_path . '/' . $filename;
+                // Move it back to the main directory.
+                if (rename($old_path, $new_path)) {
+                    $source_path = $new_path;
+                    error_log('IDE Snippets Bridge: Moved snippet from disabled directory back to main directory: ' . $filename);
+                } else {
+                     return new WP_Error('file_error', 'Failed to move snippet from disabled to main directory.', ['status' => 500]);
                 }
             }
         }
+
+        if (!$source_path || !file_exists($source_path)) {
+            return new WP_Error('not_found', 'FluentSnippet file not found.', ['status' => 404]);
+        }
+
+        // Update status in FluentSnippets file metadata
+        $new_status = $active ? 'published' : 'draft';
         
-        // Regenerate the index.php file instead of just deleting it
+        $this->update_snippet_status_in_file($source_path, $new_status);
+        error_log('IDE Snippets Bridge: Updated FluentSnippet ID ' . $id . ' status to ' . $new_status . ' in file metadata at ' . $source_path);
+        
+        // Regenerate the index.php file
         $this->regenerate_fluent_snippets_index($fluent_snippets_path);
 
         // Return success response
         return new WP_REST_Response([
             'success' => true,
-            'message' => 'FluentSnippet status toggled successfully',
+            'message' => 'FluentSnippet status toggled successfully. File not moved.',
             'active' => $active,
+            'status' => $new_status,
             'id' => $id
         ], 200);
+    }
+
+    /**
+     * Extract status from file's Internal Doc section
+     *
+     * @param string $file_content
+     * @return string 'published' or 'draft'
+     */
+    private function extract_status_from_file($file_content) {
+        // Look for @status: field in the Internal Doc section
+        if (preg_match('/@status:\s*(published|draft|active|inactive)/i', $file_content, $matches)) {
+            $status = strtolower(trim($matches[1]));
+            // Convert legacy status values
+            if ($status === 'active') {
+                return 'published';
+            } elseif ($status === 'inactive') {
+                return 'draft';
+            }
+            return $status;
+        }
+        
+        // Fallback: check for @active tag in header
+        if (preg_match('/@active\s+(true|false)/i', $file_content, $matches)) {
+            return (strtolower($matches[1]) === 'true') ? 'published' : 'draft';
+        }
+        
+        // Default to draft if no status found
+        return 'draft';
+    }
+
+    /**
+     * Update snippet status in file metadata
+     */
+    private function update_snippet_status_in_file($file_path, $new_status) {
+        if (!file_exists($file_path)) {
+            return;
+        }
+
+        $content = file_get_contents($file_path);
+        if ($content === false) {
+            return;
+        }
+
+        // IMPORTANT: Remove @active tags completely to eliminate dual status confusion
+        // Only use @status field in Internal Doc as the single source of truth
+        
+        // Remove any @active tag from the main docblock
+        $content = preg_replace(
+            '/^\s*\*\s*@active\s+(true|false)\s*$/m',
+            '',
+            $content
+        );
+        
+        // Remove empty comment lines left after @active removal
+        $content = preg_replace(
+            '/^\s*\*\s*$/m',
+            '',
+            $content
+        );
+
+        // Update the @status field in the Internal Doc section
+        $content = preg_replace(
+            '/(\* @status:\s+)(published|draft|active|inactive)/i',
+            '$1' . $new_status,
+            $content
+        );
+
+        // Also update any standalone @status lines
+        $content = preg_replace(
+            '/(\* @status\s+)(published|draft|active|inactive)/i',
+            '$1' . $new_status,
+            $content
+        );
+
+        // Write the updated content back to the file
+        file_put_contents($file_path, $content);
+    }
+
+    /**
+     * Fix snippet HTML output to prevent header conflicts
+     */
+    private function fix_snippet_html_output($file_path) {
+        if (!file_exists($file_path)) {
+            return;
+        }
+
+        $content = file_get_contents($file_path);
+        if ($content === false) {
+            return;
+        }
+
+        // Check if snippet contains full HTML structure
+        if (preg_match('/<!DOCTYPE\s+html|<html[^>]*>|<head[^>]*>|<body[^>]*>/i', $content)) {
+            // Extract the PHP header and internal doc
+            preg_match('/(.*?<\?php if \(!defined\("ABSPATH"\)\) \{ return;\} \/\/ <Internal Doc End> \?>)/s', $content, $header_matches);
+            $header = isset($header_matches[1]) ? $header_matches[1] : '';
+
+            // Extract CSS content
+            preg_match('/<style[^>]*>(.*?)<\/style>/s', $content, $css_matches);
+            $css = isset($css_matches[1]) ? trim($css_matches[1]) : '';
+
+            // Extract HTML content (everything between body tags)
+            preg_match('/<body[^>]*>(.*?)<\/body>/s', $content, $body_matches);
+            $html = isset($body_matches[1]) ? trim($body_matches[1]) : '';
+
+            // Extract JavaScript content
+            preg_match('/<script[^>]*>(.*?)<\/script>/s', $content, $js_matches);
+            $js = isset($js_matches[1]) ? trim($js_matches[1]) : '';
+
+            // Reconstruct the snippet using WordPress hooks
+            $new_content = $header . "\n<?php\n";
+
+            if (!empty($css)) {
+                $new_content .= "// Ajouter le CSS dans le head\n";
+                $new_content .= "add_action('wp_head', function() {\n";
+                $new_content .= "    ?>\n";
+                $new_content .= "    <style>\n";
+                $new_content .= "        " . str_replace("\n", "\n        ", $css) . "\n";
+                $new_content .= "    </style>\n";
+                $new_content .= "    <?php\n";
+                $new_content .= "});\n\n";
+            }
+
+            if (!empty($html) || !empty($js)) {
+                $new_content .= "// Ajouter le HTML et JavaScript dans le footer\n";
+                $new_content .= "add_action('wp_footer', function() {\n";
+                $new_content .= "    ?>\n";
+                if (!empty($html)) {
+                    $new_content .= "    " . str_replace("\n", "\n    ", $html) . "\n";
+                }
+                if (!empty($js)) {
+                    $new_content .= "\n    <script>\n";
+                    $new_content .= "        " . str_replace("\n", "\n        ", $js) . "\n";
+                    $new_content .= "    </script>\n";
+                }
+                $new_content .= "    <?php\n";
+                $new_content .= "});\n";
+            }
+
+            $new_content .= "?>";
+
+            // Write the fixed content back to the file
+            file_put_contents($file_path, $new_content);
+        }
     }
 }

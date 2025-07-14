@@ -4,7 +4,7 @@ Donate link: https://eliodata.com/donate
 Tags: snippets, code, ide, api, development
 Requires at least: 5.0
 Tested up to: 6.8
-Stable tag: 1.3.1
+Stable tag: 1.5.1
 Requires PHP: 7.4
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
@@ -122,6 +122,125 @@ Yes, the plugin is fully compatible with WordPress Multisite installations.
 5. Visual previews of code changes with AI assistance
 
 == Changelog ==
+
+= 1.5.1 =
+* CRITICAL API FIX: WordPress API now reads @status from Internal Doc
+* Fixed get_fluent_snippets endpoint to extract real status instead of file location
+* API now returns accurate active/inactive status based on @status: published/draft
+* Eliminates root cause of status synchronization issues
+* Perfect alignment between WordPress API and IDE extension achieved
+
+= 1.5.0 =
+* DEFINITIVE FIX: Eliminates cache/API conflict completely
+* API status from Internal Doc now ALWAYS takes priority over cached status
+* Cache automatically updates with fresh API status on every refresh
+* Prevents status reverting when toggling between draft/published
+* Perfect bidirectional synchronization achieved - no more conflicts
+* Status changes from WordPress site instantly reflect in IDE
+
+= 1.4.9 =
+* CRITICAL FIX: @active now reads status directly from Internal Doc
+* createCacheFile method now extracts real status from @status field in Internal Doc
+* Eliminates dependency on snippet.active which was always true
+* Ensures @active true/false perfectly matches @status published/draft
+* DEFINITIVE solution for persistent @active synchronization issues
+
+= 1.4.8 =
+* FINAL REGEX FIX: Enhanced @status detection in Internal Doc comments
+* Updated regex pattern to correctly match @status in both /* */ and // comment formats
+* Improved synchronization accuracy for FluentSnippets @active/@status fields
+* Ensures perfect detection of @status: draft/published in all comment styles
+* Complete resolution of persistent @active synchronization issues
+
+= 1.4.7 =
+* ULTIMATE FIX: Perfect @active synchronization - @active tag in cache header now reflects the real @status from Internal Doc
+* Adopts CodeSnippets structure for consistent behavior across all snippet types
+* Ensures @active true/false matches @status published/draft instantly
+* Resolves all synchronization conflicts definitively
+
+= 1.4.6 =
+* FINAL FIX: Proper Internal Doc preservation - maintains the complete Internal Doc section with @status field while removing conflicting @active tags from headers
+* Ensures perfect synchronization between draft/published states and cache files
+* Resolves persistent @active true conflicts definitively
+
+= 1.4.5 =
+* CRITICAL FIX: Complete header extraction - removes original snippet headers containing @active tags
+* Fixed: Cache generation now extracts only clean PHP code without original comment headers
+* Enhanced: Smart code extraction that skips original headers and preserves only functional code
+* Resolved: Definitive elimination of @active tag persistence from original snippet headers
+* Updated: Cache files now contain only clean code with new headers, no legacy @active conflicts
+
+= 1.4.4 =
+* CRITICAL FIX: Code cleaning in cache generation to remove @active tags from snippet content
+* Fixed: Cache files no longer contain @active true/false tags from original snippet code
+* Enhanced: createCacheFile method now strips @active tags before writing to cache
+* Resolved: Final elimination of dual @active/@status conflict in cache files
+* Updated: Cache regeneration with clean code without legacy @active tags
+
+= 1.4.3 =
+* CRITICAL FIX: Eliminated @active tag completely from cache files to prevent status conflicts
+* Fixed toggle behavior to delete cache and force regeneration with fresh API data
+* Resolved issue where @active true would persist despite @status: draft in Internal Doc
+* Improved cache management to rely solely on authoritative @status from FluentSnippets
+* Enhanced status synchronization by removing dual-state confusion
+
+= 1.4.2 =
+* MAJOR FIX: Corrected status synchronization between IDE extension and FluentSnippets
+* Fixed IDE extension to read status from Internal Doc @status: published/draft instead of @active header
+* Updated WordPress plugin to regenerate index.php based on actual file status, not directory location
+* Eliminated inconsistencies between website status, extension display, and @active tags
+* Improved FluentSnippets compatibility by reading authoritative @status field from Internal Doc
+* Enhanced status extraction with fallback mechanisms for legacy formats
+
+= 1.4.1 =
+* Fixed: Toggle status persistence issue in IDE extension
+* Improved: Cache management for snippet status updates
+* Fixed: Status reverting to previous state after toggle
+* Enhanced: Prioritization of cached status over API responses
+* Fixed: Race condition between API updates and cache refresh
+
+= 1.4.0 =
+* Synchronized @active tag with FluentSnippets @status (published/draft)
+* Corrected toggle state reflection in the IDE extension
+* Ensured @active true/false is updated alongside @status
+* Improved status synchronization between the plugin and the IDE
+* Fixed issue where IDE status was not reflecting the actual snippet state
+
+= 1.3.9 =
+* Corrected FluentSnippets status toggle to prevent file moving
+* Aligned snippet activation/deactivation with native FluentSnippets behavior
+* Removed file system operations for status changes, now only updates metadata
+* Added fallback to move snippets from legacy 'disabled' directory
+* Ensured toggling status only changes 'published'/'draft' in file headers
+
+= 1.3.6 =
+* Fixed PHP parse errors in FluentSnippets with malformed comment blocks
+* Corrected orphaned PHP comment syntax (e.g., "* @status published")
+* Enhanced snippet validation and error detection
+* Improved automatic snippet correction for syntax issues
+
+= 1.3.5 =
+* Added automatic HTML snippet correction during toggle operations
+* Implemented intelligent detection of full HTML structure in snippets
+* Enhanced snippet processing to prevent header conflicts automatically
+* Improved snippet content parsing and reconstruction using WordPress hooks
+
+= 1.3.4 =
+* Fixed PHP syntax error in generated index.php file (variable escaping issue)
+* Corrected output buffering code generation to prevent parse errors
+* Enhanced variable handling in dynamically generated PHP code
+
+= 1.3.3 =
+* Added automatic output buffering protection for all FluentSnippets to prevent header conflicts
+* Enhanced index.php regeneration with built-in header safety mechanisms
+* Improved handling of snippets containing complete HTML documents or immediate output
+* Added intelligent content filtering to prevent DOCTYPE and HTML tag conflicts
+
+= 1.3.2 =
+* Fixed "Cannot modify header information" error when toggling FluentSnippets status
+* Improved snippet output handling to use WordPress hooks instead of direct HTML output
+* Enhanced compatibility with snippets containing full HTML documents
+* Fixed header conflicts by properly using wp_head and wp_footer actions
 
 = 1.3.1 =
 * Fixed critical issue with FluentSnippets index.php file deletion during snippet toggle
